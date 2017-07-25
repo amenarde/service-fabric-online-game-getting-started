@@ -1,0 +1,87 @@
+﻿body {
+    background-color: #2F5597;
+    font-family: Helvetica, sans-serif;
+}
+
+
+.status_bar {
+    position: fixed;
+    z-index: 100;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: whitesmoke;
+}
+/* Login *************************************/
+.loginDiv {
+    position: absolute;
+    top: 5vh;
+    left: 12.5vw;
+    width: 75vw;
+    text-align: center;
+    color: white;
+    line-height: 1;
+    font-size: 2vh;
+}
+
+#logo {
+    font-family: 'Bungee Inline', cursive;
+    font-size: 10vh;
+}
+
+.userDiv input {
+    text-align: center;
+    width: 35%;
+    border-radius: 8px;
+    border: 0px;
+    font-size: 2vh;
+    padding: 10px;
+}
+
+body button {
+    border: none;
+    padding: 10px 10px;
+    background-color: white;
+    text-align: center;
+    border-radius: 8px;
+    height: 4vh;
+    width: 4vw;
+    vertical-align: middle;
+    box-shadow: darkgrey 4px 4px;
+}
+
+
+body button:active {
+    margin-left: 4px;
+    margin-top: 4px;
+    box-shadow: darkgrey 0px 0px;
+}
+
+
+.roomDiv {
+    position: absolute;
+    left: 10vw;
+    width: 80vw;
+    text-align: center;
+}
+
+.roomDiv input {
+    width: 90%;
+    border-radius: 8px;
+    border: 0px;
+    font-size: 2vh;
+    padding: 10px;
+}
+
+th, td {
+    border-bottom: 1px solid #ddd;
+    padding: 10px;
+}
+
+/**********************************************/
+
+canvas {
+    position: absolute;
+    bottom: 5vh;
+    left: 12.5vw;
+}

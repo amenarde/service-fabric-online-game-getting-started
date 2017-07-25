@@ -5,6 +5,16 @@
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
     <IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="wwwroot\css\game.css" />
+    <Content Include="wwwroot\css\site.css" />
+    <Content Include="wwwroot\img\room.png" />
+    <Content Include="wwwroot\index.html" />
+    <Content Include="wwwroot\js\game.js" />
+    <Content Include="wwwroot\js\site.js" />
+    <Content Include="wwwroot\_references.js" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.0.0" />
     <PackageReference Include="Microsoft.AspNetCore" Version="1.1.2" />
@@ -12,10 +22,16 @@
     <PackageReference Include="Microsoft.AspNetCore.StaticFiles" Version="1.1.2" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="1.1.2" />
     <PackageReference Include="Microsoft.ServiceFabric" Version="5.6.210" />
+    <PackageReference Include="Microsoft.ServiceFabric.AspNetCore.WebListener" Version="2.6.210" />
+    <PackageReference Include="Microsoft.ServiceFabric.Data" Version="2.6.210" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="2.6.210" />
     <PackageReference Include="Microsoft.VisualStudio.Web.BrowserLink" Version="1.1.2" />
   </ItemGroup>
   <ItemGroup>
     <DotNetCliToolReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Tools" Version="1.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Common\Common.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,1 @@
+c:\users\t-anmena.redmond\documents\visual studio 2017\Projects\SampleGame\SampleGame\obj\x64\Debug\SampleGame.sfprojResolveAssemblyReference.cache

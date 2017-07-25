@@ -1,18 +1,59 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest ApplicationTypeName="SampleGameType"
-                     ApplicationTypeVersion="1.0.0"
-                     xmlns="http://schemas.microsoft.com/2011/01/fabric"
-                     xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="SampleGameType" ApplicationTypeVersion="1.0.0" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
-    <Parameter Name="WebService_InstanceCount" DefaultValue="-1" />
+    <Parameter Name="PlayerManager_MinReplicaSetSize" DefaultValue="2" />
+    <Parameter Name="PlayerManager_PartitionCount" DefaultValue="1" />
+    <Parameter Name="PlayerManager_TargetReplicaSetSize" DefaultValue="3" />
+    <Parameter Name="RoomManager_MinReplicaSetSize" DefaultValue="2" />
+    <Parameter Name="RoomManager_PartitionCount" DefaultValue="1" />
+    <Parameter Name="RoomManager_TargetReplicaSetSize" DefaultValue="3" />
+    <Parameter Name="WebService_InstanceCount" DefaultValue="1" />
+    <Parameter Name="WebService_RoomManagerName" DefaultValue="RoomManager" />
+    <Parameter Name="WebService_PlayerManagerName" DefaultValue="PlayerManager" />
+    <Parameter Name="WebService_ReverseProxyPort" DefaultValue="19081" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="PlayerManagerPkg" ServiceManifestVersion="1.0.0" />
+    <ConfigOverrides>
+      <ConfigOverride Name="Config">
+        <Settings>
+          <Section Name="MyConfigSection">
+            <Parameter Name="RoomManagerName" Value="[WebService_RoomManagerName]" />
+            <Parameter Name="ReverseProxyPort" Value="[WebService_ReverseProxyPort]" />
+          </Section>
+        </Settings>
+      </ConfigOverride>
+    </ConfigOverrides>
+  </ServiceManifestImport>
+  <ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="RoomManagerPkg" ServiceManifestVersion="1.0.0" />
+    <ConfigOverrides>
+      <ConfigOverride Name="Config">
+        <Settings>
+          <Section Name="MyConfigSection">
+            <Parameter Name="PlayerManagerName" Value="[WebService_PlayerManagerName]" />
+            <Parameter Name="ReverseProxyPort" Value="[WebService_ReverseProxyPort]" />
+          </Section>
+        </Settings>
+      </ConfigOverride>
+    </ConfigOverrides>
+  </ServiceManifestImport>
+  <ServiceManifestImport>
     <ServiceManifestRef ServiceManifestName="WebServicePkg" ServiceManifestVersion="1.0.0" />
-    <ConfigOverrides />
+    <ConfigOverrides>
+      <ConfigOverride Name="Config">
+        <Settings>
+          <Section Name="MyConfigSection">
+            <Parameter Name="RoomManagerName" Value="[WebService_RoomManagerName]" />
+            <Parameter Name="ReverseProxyPort" Value="[WebService_ReverseProxyPort]" />
+            <Parameter Name="PlayerManagerName" Value="[WebService_PlayerManagerName]" />
+          </Section>
+        </Settings>
+      </ConfigOverride>
+    </ConfigOverrides>
   </ServiceManifestImport>
   <DefaultServices>
     <!-- The section below creates instances of service types, when an instance of this 
@@ -20,6 +61,16 @@
          ServiceFabric PowerShell module.
          
          The attribute ServiceTypeName below must match the name defined in the imported ServiceManifest.xml file. -->
+    <Service Name="PlayerManager">
+      <StatefulService ServiceTypeName="PlayerManagerType" TargetReplicaSetSize="[PlayerManager_TargetReplicaSetSize]" MinReplicaSetSize="[PlayerManager_MinReplicaSetSize]">
+        <UniformInt64Partition PartitionCount="[PlayerManager_PartitionCount]" LowKey="-2147483648" HighKey="2147483647" />
+      </StatefulService>
+    </Service>
+    <Service Name="RoomManager">
+      <StatefulService ServiceTypeName="RoomManagerType" TargetReplicaSetSize="[RoomManager_TargetReplicaSetSize]" MinReplicaSetSize="[RoomManager_MinReplicaSetSize]">
+        <UniformInt64Partition PartitionCount="[RoomManager_PartitionCount]" LowKey="-2147483648" HighKey="2147483647" />
+      </StatefulService>
+    </Service>
     <Service Name="WebService" ServicePackageActivationMode="ExclusiveProcess">
       <StatelessService ServiceTypeName="WebServiceType" InstanceCount="[WebService_InstanceCount]">
         <SingletonPartition />

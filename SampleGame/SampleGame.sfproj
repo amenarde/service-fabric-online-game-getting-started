@@ -30,6 +30,8 @@
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\PlayerManager\PlayerManager.csproj" />
+    <ProjectReference Include="..\RoomManager\RoomManager.csproj" />
     <ProjectReference Include="..\WebService\WebService.csproj" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />

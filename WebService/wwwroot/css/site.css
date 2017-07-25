@@ -1,37 +1,113 @@
 ﻿body {
-    padding-top: 50px;
-    padding-bottom: 20px;
+    background-color: #2F5597;
+    font-family: Helvetica, sans-serif;
+    color: white;
+    line-height: 1;
+    font-size: 2vh;
 }
 
-/* Wrapping element */
-/* Set some basic padding to keep content from hitting the edges */
-.body-content {
-    padding-left: 15px;
-    padding-right: 15px;
-}
 
-/* Set widths on the form inputs since otherwise they're 100% wide */
-input,
-select,
-textarea {
-    max-width: 280px;
-}
-
-/* Carousel */
-.carousel-caption p {
-    font-size: 20px;
-    line-height: 1.4;
-}
-
-/* Make .svg files in the carousel display properly in older browsers */
-.carousel-inner .item img[src$=".svg"] {
+.status_bar {
+    position: fixed;
+    z-index: 100;
+    bottom: 0;
+    left: 0;
     width: 100%;
+    background-color: whitesmoke;
+    color: darkslategray;
+}
+/* Login *************************************/
+.loginDiv {
+    position: absolute;
+    top: 5vh;
+    left: 12.5vw;
+    width: 75vw;
+    text-align: center;
+    
 }
 
-/* Hide/rearrange for smaller screens */
-@media screen and (max-width: 767px) {
-    /* Hide captions */
-    .carousel-caption {
-        display: none;
-    }
+#logo {
+    font-family: 'Bungee Inline', cursive;
+    font-size: 10vh;
+}
+
+body input {
+    text-align: center;
+    width: 35%;
+    border-radius: 8px;
+    border: 0px;
+    font-size: 2vh;
+    padding: 10px;
+}
+
+.gameDiv input {
+    font-size: 1.5vh;
+    width: initial;
+}
+
+.gameDiv button {
+    height: 3vh;
+}
+
+body button {
+    border: none;
+    padding: 10px 10px;
+    background-color: white;
+    text-align: center;
+    color: #2F5597;
+    border-radius: 8px;
+    height: 4vh;
+    width: 4vw;
+    vertical-align: middle;
+    box-shadow: darkgrey 4px 4px;
+}
+
+
+body button:active {
+    margin-left: 4px;
+    margin-top: 4px;
+    box-shadow: darkgrey 0px 0px;
+}
+
+
+.roomDiv {
+    display: table;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.roomDiv input {
+    width: 90%;
+    border-radius: 8px;
+    border: 0px;
+    font-size: 2vh;
+    padding: 10px;
+}
+
+.roomDiv th, .roomDiv td {
+    border-bottom: 1px solid #ddd;
+    padding: 10px;
+}
+
+.gameDiv th, .gameDiv td {
+    border: 1px solid #ddd;
+    padding: 10px;
+}
+
+.gameDiv {
+    position: absolute;
+    left: 5vw;
+    margin-right: 5vw;
+    background-color: azure;
+}
+
+/**********************************************/
+
+canvas {
+    position: absolute;
+    left: 5vw;
+    top: 6vh;
+    -moz-box-shadow: inset 0 0 10px #000000;
+    -webkit-box-shadow: inset 0 0 10px #000000;
+    box-shadow: inset 0 0 10px #000000;
 }

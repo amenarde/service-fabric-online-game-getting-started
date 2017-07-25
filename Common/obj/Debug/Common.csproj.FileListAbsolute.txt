@@ -1,0 +1,5 @@
+c:\users\t-anmena.redmond\documents\visual studio 2017\Projects\SampleGame\Common\bin\Debug\Common.dll
+c:\users\t-anmena.redmond\documents\visual studio 2017\Projects\SampleGame\Common\bin\Debug\Common.pdb
+c:\users\t-anmena.redmond\documents\visual studio 2017\Projects\SampleGame\Common\obj\Debug\Common.csprojResolveAssemblyReference.cache
+c:\users\t-anmena.redmond\documents\visual studio 2017\Projects\SampleGame\Common\obj\Debug\Common.dll
+c:\users\t-anmena.redmond\documents\visual studio 2017\Projects\SampleGame\Common\obj\Debug\Common.pdb

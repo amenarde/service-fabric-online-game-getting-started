@@ -1,0 +1,39 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <script src="js/site.js"></script>
+    <script src="js/game.js"></script>
+    <link rel="stylesheet" href="css/site.css">
+    <link href="https://fonts.googleapis.com/css?family=Bungee+Inline" rel="stylesheet">
+    <title>WorkBud</title>
+</head>
+<body>
+    <div class="loginDiv">
+        <p id="logo">Workbud</p>
+        Login 
+        <br><br>
+        <div class="userDiv">
+            <input type="text" id="pidform" placeholder="Player ID"> <br>
+            <br><br>
+        </div>
+        <div class="roomDiv">
+            <table id="roomstable">
+                <tr></tr>
+            </table>
+        </div>
+        </div>
+
+
+    <div class="gameDiv">
+        WorkBud
+        <input type="text" id="colorupdateform" placeholder="Change Your Color (Any HEX Color)">
+        <button onclick="updategame(false, true)" style="border-left: solid #fff;"></button>                      
+        <button onclick="endgame()">Logout</button>
+    </div>
+    
+    <div class="status_bar">
+        Status: <output id="status"></output>
+    </div>
+</body>
+</html>
