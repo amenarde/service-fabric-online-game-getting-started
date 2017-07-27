@@ -24,6 +24,9 @@ namespace RoomManager.Controllers
         private static readonly Uri RoomDictionaryName = new Uri("store:/rooms");
         private readonly IReliableStateManager stateManager;
 
+        private readonly string uri;
+        private readonly string proxy;
+
         public RoomStoreController(StatefulServiceContext serviceContext, HttpClient httpClient, FabricClient fabricClient, ConfigSettings settings, IReliableStateManager stateManager)
         {
             this.stateManager = stateManager;
@@ -31,6 +34,11 @@ namespace RoomManager.Controllers
             this.httpClient = httpClient;
             this.configSettings = settings;
             this.fabricClient = fabricClient;
+
+            this.uri = $"{ this.configSettings.ReverseProxyPort}/" +
+                $"{this.serviceContext.CodePackageActivationContext.ApplicationName.Replace("fabric:/", "")}";
+            this.proxy = $"http://localhost:{this.uri}/" +
+                $"{this.configSettings.PlayerManagerName}/api/PlayerStore/";
         }
 
 
@@ -47,38 +55,39 @@ namespace RoomManager.Controllers
 
                 using (ITransaction tx = this.stateManager.CreateTransaction())
                 {
+                    IReliableDictionary<string, ActivePlayer> activeroom =
+                      await this.stateManager.GetOrAddAsync<IReliableDictionary<string, ActivePlayer>>(roomid);
+
                     ConditionalValue<Room> roomOption = await roomdict.TryGetValueAsync(tx, roomid);
                     if (!roomOption.HasValue)
                     {
                         //Scenario: Room does not exist yet
                         await roomdict.AddAsync(tx, roomid, new Room(1, "default"));
                     }
-
-                    IReliableDictionary<string, ActivePlayer> activeroom =
-                        await this.stateManager.GetOrAddAsync<IReliableDictionary<string, ActivePlayer>>(roomid);
-
-                    if (await activeroom.ContainsKeyAsync(tx, playerid, LockMode.Update))
+                    else
                     {
-                        //Player is already in here
-                        return new ContentResult { StatusCode = 400, Content = $"This player is already logged in" };
+                        Room r = roomOption.Value; r.numplayers++;
+                        await roomdict.SetAsync(tx, roomid, r);
                     }
-
-                    Room r = roomOption.Value; r.numplayers++;
-                    await roomdict.SetAsync(tx, roomid, r);
-                    await activeroom.AddAsync(tx, playerid, new ActivePlayer(player, DateTime.UtcNow, LogState.LoggedIn));
+                    
+                    await activeroom.SetAsync(tx, playerid, new ActivePlayer(player, DateTime.UtcNow));
                     await tx.CommitAsync();
                     return new ContentResult { StatusCode = 200, Content = $"Successfully Logged In" };
                 }
             }
-            catch (Exception e)
+            catch (FabricNotPrimaryException)
             {
-                throw new NotImplementedException();
+                return new ContentResult { StatusCode = 410, Content = "The primary replica has moved. Please re-resolve the service." };
+            }
+            catch (FabricException)
+            {
+                return new ContentResult { StatusCode = 503, Content = "The service was unable to process the request. Please try again." };
             }
         }
 
         [Route("api/[controller]/Exists")]
         [HttpGet]
-        public async Task<bool> Exists(string roomid, string playerid)
+        public async Task<IActionResult> Exists(string roomid, string playerid)
         {
             try
             {
@@ -89,7 +98,7 @@ namespace RoomManager.Controllers
                 {
                     if (!await roomdict.ContainsKeyAsync(tx, roomid))
                     {
-                        return false;
+                        return new ContentResult { StatusCode = 200, Content = "false" };
                     }
 
                     IReliableDictionary<string, ActivePlayer> activeroom =
@@ -97,15 +106,15 @@ namespace RoomManager.Controllers
 
                     if (!await activeroom.ContainsKeyAsync(tx, playerid))
                     {
-                        return false;
+                        return new ContentResult { StatusCode = 200, Content = "false" };
                     }
 
-                    return true;
+                    return new ContentResult { StatusCode = 200, Content = "true" };
                 }
             }
             catch
             {
-                throw new NotImplementedException();
+                return new ContentResult { StatusCode = 500 };
             }
         }
 
@@ -164,10 +173,7 @@ namespace RoomManager.Controllers
                     IAsyncEnumerator<KeyValuePair<string, ActivePlayer>> enumerator = enumerable.GetAsyncEnumerator();
                     while (await enumerator.MoveNextAsync(CancellationToken.None))
                     {
-                        if(enumerator.Current.Value.state == LogState.LoggedIn)
-                        {
-                            result.Add(new KeyValuePair<string, Player>(enumerator.Current.Key, enumerator.Current.Value.player));
-                        }
+                        result.Add(new KeyValuePair<string, Player>(enumerator.Current.Key, enumerator.Current.Value.player));
                     }
                     await tx.CommitAsync();
                     return new ContentResult { StatusCode = 200, Content = JsonConvert.SerializeObject(result) };
@@ -210,6 +216,8 @@ namespace RoomManager.Controllers
 
                     ActivePlayer pp = player_option.Value;
                     pp.player = p;
+                    pp.lastUpdated = DateTime.UtcNow;
+
                     await activeroomdict.SetAsync(tx, playerid, pp);
 
                     await tx.CommitAsync();
@@ -226,16 +234,81 @@ namespace RoomManager.Controllers
 
         [Route("api/[controller]/EndGame")]
         [HttpGet]
-        public async Task<string> EndGame(string roomid, string playerid)
+        public async Task<IActionResult> EndGame(string roomid, string playerid)
         {
-            throw new NotImplementedException();
-        }
+            try
+            {
+                IReliableDictionary<string, Room> roomdict =
+                    await this.stateManager.GetOrAddAsync<IReliableDictionary<string, Room>>(RoomDictionaryName);
 
-        [Route("api/[controller]/GetRoomStats")]
-        [HttpGet]
-        public async Task<string> GetRoomStats()
-        {
-            throw new NotImplementedException();
+                Room room;
+
+
+                using (ITransaction tx = this.stateManager.CreateTransaction())
+                {
+                    ConditionalValue<Room> roomOption = await roomdict.TryGetValueAsync(tx, roomid);
+                    if (!roomOption.HasValue)
+                    {
+                        //Requested room state for a room that isn't active
+                        return new ContentResult { StatusCode = 400, Content = $"This room does not exist" };
+                    }
+
+                    room = roomOption.Value;
+                    IReliableDictionary<string, ActivePlayer> activeroomdict =
+                    await this.stateManager.GetOrAddAsync<IReliableDictionary<string, ActivePlayer>>(roomid);
+
+                    ConditionalValue<ActivePlayer> player_option = await activeroomdict.TryGetValueAsync(tx, playerid);
+                    if (!player_option.HasValue)
+                    {
+                        //Requested to update state of a player that is not in this room
+                        return new ContentResult { StatusCode = 400, Content = "This player is not in this room" };
+                    }
+
+                    await tx.CommitAsync();
+
+                    int key = Partitioners.GetPlayerPartition(playerid);
+                    string url = this.proxy + $"EndGame/?playerid={playerid}" +
+                        $"&playerdata={JsonConvert.SerializeObject(player_option.Value.player)}" +
+                        $"&PartitionKind=Int64Range&PartitionKey={key}";
+                    HttpResponseMessage response = await this.httpClient.GetAsync(url);
+                    string response_message = await response.Content.ReadAsStringAsync();
+                    if (! ((int)response.StatusCode == 200))
+                    {
+                        return new ContentResult { StatusCode = 200, Content = $"Successfully logged out / Timeout Scenario" };
+                    }
+                }
+                using (ITransaction tx1 = this.stateManager.CreateTransaction())
+                {
+                    IReliableDictionary<string, ActivePlayer> activeroomdict =
+                    await this.stateManager.GetOrAddAsync<IReliableDictionary<string, ActivePlayer>>(roomid);
+
+                    await activeroomdict.TryRemoveAsync(tx1, playerid);
+
+                    room.numplayers--;
+                    if (room.numplayers == 0)
+                    {
+                        await roomdict.TryRemoveAsync(tx1, roomid);
+                        await tx1.CommitAsync();
+                    }
+                    else
+                    {
+                        await roomdict.SetAsync(tx1, roomid, room);
+                        await tx1.CommitAsync();
+                    }
+
+
+                    return new ContentResult { StatusCode = 200, Content = $"Successfully logged out" };
+                }
+            }
+
+            catch (FabricNotPrimaryException)
+            { return new ContentResult { StatusCode = 410, Content = "The primary replica has moved. Please re-resolve the service." }; }
+            catch (FabricException)
+            { return new ContentResult { StatusCode = 503, Content = "The service was unable to process the request. Please try again." }; }
+            catch (Exception e)
+            {
+                return new ContentResult { StatusCode = 500, Content = "Bad state" };
+            }
         }
     }
 }

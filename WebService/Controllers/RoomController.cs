@@ -122,5 +122,17 @@ namespace WebService.Controllers
             HttpResponseMessage response = await this.httpClient.GetAsync(url);
             return this.StatusCode((int)response.StatusCode, await response.Content.ReadAsStringAsync());
         }
+
+        [Route("api/[controller]/EndGame")]
+        [HttpGet]
+        public async Task<IActionResult> EndGameAsync(string playerid, string roomid)
+        {
+
+            int key = Partitioners.GetRoomPartition(roomid);
+            string url = this.proxy + $"EndGame/?roomid={roomid}&playerid={playerid}&PartitionKind=Int64Range&PartitionKey={key}";
+
+            HttpResponseMessage response = await this.httpClient.GetAsync(url);
+            return this.StatusCode((int)response.StatusCode, await response.Content.ReadAsStringAsync());
+        }
     }
 }

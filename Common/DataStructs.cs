@@ -3,7 +3,7 @@
 namespace Common
 {
 
-    public enum LogState { LoggedIn, LoggedOut, InTransit }
+    public enum LogState { LoggedIn, LoggedOut}
 
     public struct PlayerStats
     {
@@ -44,13 +44,11 @@ namespace Common
     {
         public Player player;
         public DateTime lastUpdated; //UTC
-        public LogState state;
 
-        public ActivePlayer(Player player, DateTime lastUpdated, LogState state)
+        public ActivePlayer(Player player, DateTime lastUpdated)
         {
             this.player = player;
             this.lastUpdated = lastUpdated;
-            this.state = state;
         }
     }
 

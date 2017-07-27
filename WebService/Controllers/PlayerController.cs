@@ -61,7 +61,8 @@ namespace WebService.Controllers
         public async Task<IActionResult> GetStats()
         {
 
-            ServicePartitionList partitions = await this.fabricClient.QueryManager.GetPartitionListAsync(new Uri(this.uri + $"{this.configSettings.PlayerManagerName}"));
+            ServicePartitionList partitions = await this.fabricClient.QueryManager.GetPartitionListAsync(
+                    new Uri($"{this.serviceContext.CodePackageActivationContext.ApplicationName}/{this.configSettings.PlayerManagerName}"));
             PlayerStats result = new PlayerStats(0, 0, 0, 0);
             
             foreach (Partition partition in partitions)
@@ -84,7 +85,7 @@ namespace WebService.Controllers
                 result.numAccounts = newTotal;
             }
 
-            return this.StatusCode(200, result);
+            return this.StatusCode(200, JsonConvert.SerializeObject(result));
         }
     }
 }

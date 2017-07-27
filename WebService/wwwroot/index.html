@@ -19,7 +19,6 @@
         </div>
         <div class="roomDiv">
             <table id="roomstable">
-                <tr></tr>
             </table>
         </div>
         </div>
@@ -27,13 +26,14 @@
 
     <div class="gameDiv">
         WorkBud
-        <input type="text" id="colorupdateform" placeholder="Change Your Color (Any HEX Color)">
-        <button onclick="updategame(false, true)" style="border-left: solid #fff;"></button>                      
-        <button onclick="endgame()">Logout</button>
+        <input type="text" id="colorupdateform" placeholder="Change Color (HEX Code)" style="margin-left: 20px">
+        <button onclick="updateColor()" ></button>                      
+        <button onclick="endgame()" style="margin-left: 20px">Logout</button>
     </div>
     
     <div class="status_bar">
-        Status: <output id="status"></output>
+        <button onclick="getPlayerStats()">Get Statistics</button>
+        Status: <output id="status"></output> 
     </div>
 </body>
 </html>

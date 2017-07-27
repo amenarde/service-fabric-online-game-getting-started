@@ -4,6 +4,8 @@
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+
+
 /**
  * These times represent the frequency of client draws and requests, and should be chosen on the basis of a few factors:
  * CLIENT_REFRESH_TIME: how fast client's game state is redrawn // should be most often since does not send messages
@@ -12,23 +14,12 @@
  * SERVER_PUSH_TIME: Does not need to be often because of client refreshing, but too long will lead to bad response for other clients.
  */
 const CLIENT_REFRESH_TIME = 50; var drawgamerefresh; 
-const SERVER_READ_TIME = 75; var getgamerefesh;    
-const SERVER_PUSH_TIME = 100; var updategamerefresh;
+const SERVER_READ_TIME = 75;
+const SERVER_PUSH_TIME = 100;
 
+const ROOM_GET_TIME = 1000; var showroomrefresh;
 
-function test() {var http = new XMLHttpRequest();
-    http.onreadystatechange = function () {
-        if (http.readyState === 4) {
-            returnData = http.responseText;
-            document.getElementById("status").innerHTML = returnData;
-        }
-    };
-    
-
-    http.open("GET", "api/Player/Test/?text=hello");
-    http.send();
-}
-
+const ROOM_OPTIONS = ["Office", "Garden", "Cafe"];
 
 // These structures are used to manage the relevant game state for the client and effectively communicate with the controller.
 var clientgamestate = {
@@ -46,89 +37,38 @@ var servergamestate = {
 };
 
 
+
 /**
- * On window load hide irrelevant divs to maintain order and retrieve rooms from backend.
+ * On window load hide irrelevant divs to maintain order and start to retrieve rooms from backend.
  */
 window.onload = function () {
     document.getElementsByClassName("gameDiv")[0].style.display = 'none';
-    showrooms();
+    showrooms(true);
+    showroomrefresh = setInterval(function () {
+        showrooms(false);
+    }, ROOM_GET_TIME);
 };
 
+/**
+* On window close make an attempt to end the game.
+*/
 window.addEventListener('beforeunload', function (event) {
-    endgame(clientgamestate.playerid, clientgamestate.roomid);
+    endgame();
 }, false);
 
+
 /**
- * This function looks for key presses so that it knows to update the clients game view. This function is designed to allow for smooth
- * gameplay for the player. Actually updating the game happens in a different loop.
+ * LOGIN SECTION
+ * newgame
+ * showrooms
  */
-function updategamewatcher() {
-
-    if (gameArea.keys && gameArea.keys[37]) {
-        if (clientgamestate.xpos <= -6)
-        {
-            clientgamestate.xpos = -6;
-        }
-        else
-        {
-            clientgamestate.xpos -= 1;
-        }
-        
-        
-        //this passes in a copy of the game state, reference does not garauntee consistency for duration of draw function
-        gameArea.drawGame(JSON.parse(JSON.stringify(clientgamestate.roomdata)), false);
-    }
-    else if (gameArea.keys && gameArea.keys[39]) {
-        if (clientgamestate.xpos >= 94) {
-            clientgamestate.xpos = 94;
-        }
-        else {
-            clientgamestate.xpos += 1;
-        }
-
-        //this passes in a copy of the game state, reference does not garauntee consistency for duration of draw function
-        gameArea.drawGame(JSON.parse(JSON.stringify(clientgamestate.roomdata)), false);
-    }
-    if (gameArea.keys && gameArea.keys[38]) {
-        if (clientgamestate.ypos <= -6) {
-            clientgamestate.ypos = -6;
-        }
-        else {
-            clientgamestate.ypos -= 1;
-        }
-        //this passes in a copy of the game state, reference does not garauntee consistency for duration of draw function
-        gameArea.drawGame(JSON.parse(JSON.stringify(clientgamestate.roomdata)), false);
-    }
-    else if (gameArea.keys && gameArea.keys[40]) {
-        if (clientgamestate.ypos >= 90) {
-            clientgamestate.ypos = 90;
-        }
-        else {
-            clientgamestate.ypos += 1;
-        }
-        //this passes in a copy of the game state, reference does not garauntee consistency for duration of draw function
-        gameArea.drawGame(JSON.parse(JSON.stringify(clientgamestate.roomdata)), false);
-    }
-
-}
-
-
-// Checks whether the client's state has deviated from the last known server state, which would prompt an update request.
-function toupdate() {
-    if (clientgamestate.xpos !== servergamestate.xpos || clientgamestate.ypos !== servergamestate.ypos) {
-        updategame(true, false);
-    }
-    else {
-        window.setTimeout(function () { toupdate(); }, SERVER_PUSH_TIME);
-    }
-}
 
 /**
  * Sends a request to the controller to establish a new game.
- * sets status message on the game's status bar
- * initializes the game canvas and retrieves the first server state that sets the client state
- * @argument {boolean} bool true if chooosing an already existing room, false if a new room
- * @argument {button} bool so that the function can reach in and get the name of the room
+ * Initializes the game canvas and retrieves the first server state that sets the client state
+ * @argument {boolean} bool true if chooosing an already existing room, false if a new room.
+ * @argument {button} context so that the function can reach in and get the name of the room.
+ * These arguments tell this function where to gather the relevant information from the html.
  */
 function newgame(bool, context) {
 
@@ -146,6 +86,8 @@ function newgame(bool, context) {
             if (http.status < 400) {
                 if (returnData) {
                     document.getElementById("status").innerHTML = "Successfully logged in";
+
+                    clearInterval(showroomrefresh);
 
                     clientgamestate.playerid = document.getElementById("pidform").value;
                     clientgamestate.roomid = roomid;
@@ -174,7 +116,12 @@ function newgame(bool, context) {
 
 
 
-function showrooms() {
+/**
+ * Asks the controller for the current available rooms. This allows the user to see and choose all available rooms, or
+ * to make their own. Refreshes periodically until a game has begun. Handles populating the related table.
+ * @argument {boolean} firsttime Determines whether to draw the room input box or not
+ */
+function showrooms(firsttime) {
     var http = new XMLHttpRequest();
     http.onreadystatechange = function () {
         if (http.readyState === 4) {
@@ -183,19 +130,57 @@ function showrooms() {
                 if (returnData) {
                     returnData = JSON.parse(returnData);
                     var table = document.getElementById('roomstable');
+                    var row;
+                    var namecell; var name;
+                    var typecell; var type;
+                    var numcell; var num;
+                    var buttoncell; var button;
 
-                    while (table.childNodes[1].childElementCount > 1) {
-                        table.removeChild(table.lastChild);
+
+                    if (firsttime) {
+                        //Header
+                        row = table.insertRow();
+                        namecell = row.insertCell(); name = document.createTextNode("  Room Name  "); namecell.appendChild(name);
+                        typecell = row.insertCell(); type = document.createTextNode("  Room Type  "); typecell.appendChild(type);
+                        numcell = row.insertCell(); num = document.createTextNode("# Players"); numcell.appendChild(num);
+                        buttoncell = row.insertCell(); button = document.createTextNode("Choose / Create"); buttoncell.appendChild(button);
+
+                        //New Room Entry Form
+                        row = table.insertRow();
+
+                        namecell = row.insertCell();
+                        name = document.createElement('INPUT');
+                        name.setAttribute('type', 'text');
+                        name.setAttribute('id', 'newgamename');
+                        name.setAttribute('placeholder', 'Room Name');
+                        namecell.appendChild(name);
+
+                        typecell = row.insertCell();
+                        type = document.createElement('select');
+                        for (var i = 0; i < ROOM_OPTIONS.length; i++) {
+                            var option = document.createElement("option");
+                            option.value = ROOM_OPTIONS[i];
+                            option.text = ROOM_OPTIONS[i];
+                            type.appendChild(option);
+                        }
+                        typecell.appendChild(type);
+
+                        numcell = row.insertCell(); num = document.createTextNode(""); numcell.appendChild(num);
+
+                        buttoncell = row.insertCell();
+                        button = document.createElement("button");
+                        button.setAttribute('type', 'button');
+                        button.setAttribute('id', "newgamebutton")
+                        button.setAttribute('onclick', 'newgame(false, this)');
+                        buttoncell.appendChild(button);
                     }
 
-                    //Header
-                    var row = table.insertRow();
-                    var namecell = row.insertCell(); var name = document.createTextNode("  Room Name  "); namecell.appendChild(name);
-                    var typecell = row.insertCell(); var type = document.createTextNode("  Room Type  "); typecell.appendChild(type);
-                    var numcell = row.insertCell(); var num = document.createTextNode("# Players"); numcell.appendChild(num);
-                    var buttoncell = row.insertCell(); var button = document.createTextNode("Choose / Create"); buttoncell.appendChild(button);
+                    //Delete all rows beside your first two
+                    while (table.rows.length > 2) {
+                        table.deleteRow(2);
+                    }
 
-
+                    //Populate table with new room data
                     for (var i = 0; i < returnData.length; i++) {
                         row = table.insertRow();
                         namecell = row.insertCell(); name = document.createTextNode(returnData[i].Key); namecell.appendChild(name);
@@ -209,30 +194,6 @@ function showrooms() {
                         button.setAttribute('onclick', 'newgame(true, this)');
                         buttoncell.appendChild(button);
                     }
-
-                    row = table.insertRow();
-
-                    namecell = row.insertCell();
-                    name = document.createElement('INPUT');
-                    name.setAttribute('type', 'text');
-                    name.setAttribute('id', 'newgamename');
-                    name.setAttribute('placeholder', 'Room Name');
-                    namecell.appendChild(name);
-
-                    typecell = row.insertCell();
-                    type = document.createElement('INPUT');
-                    type.setAttribute('type', 'text');
-                    type.setAttribute('placeholder', 'Room Type');
-                    typecell.appendChild(type);
-
-                    numcell = row.insertCell(); num = document.createTextNode(""); numcell.appendChild(num);
-
-                    buttoncell = row.insertCell();
-                    button = document.createElement("button");
-                    button.setAttribute('type', 'button');
-                    button.setAttribute('id', "newgamebutton")
-                    button.setAttribute('onclick', 'newgame(false, this)');
-                    buttoncell.appendChild(button);
 
                 }
                 else {
@@ -248,30 +209,116 @@ function showrooms() {
     http.send();
 }
 
-function updategame(updatepos, updatefeat) {
+/**
+ * UPDATE GAME SECTION
+ * updategamewatcher
+ * toUpdate
+ * updategame
+ * endgame
+ */
 
-    var colorchange; var xchange; var ychange;
+/**
+ * This function looks for key presses so that it knows to update the clients game view. This function is designed to allow for smooth
+ * gameplay for the player. A different watcher will look for these changes and periodically push to the backend.
+ */
+function updategamewatcher() {
 
-    if (updatefeat) {
-        if (document.getElementById("colorupdateform").value === "") {
-            colorchange = clientgamestate.color;
+    if (gameArea.keys && gameArea.keys[37]) {
+        if (clientgamestate.xpos <= -6){
+            clientgamestate.xpos = -6;
+        }
+        else
+        {
+            clientgamestate.xpos -= 1;
+        }
+        
+        
+        //this passes in a copy of the game state, reference does not garauntee consistency for duration of draw function
+        gameArea.drawGame(JSON.parse(JSON.stringify(clientgamestate.roomdata)), false);
+    }
+    else if (gameArea.keys && gameArea.keys[39]) {
+        if (clientgamestate.xpos >= 94) {
+            clientgamestate.xpos = 94;
         }
         else {
-            colorchange = document.getElementById("colorupdateform").value;
-            if (!colorchange.startsWith('#')) { colorchange = '#'.concat(colorchange); }
-            var validcolor = /(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)/i.test(colorchange);
-            if (!validcolor) { //blackbox regex that verifies color formatting
-                document.getElementById("status").innerHTML = "not a valid color code";
-                return;
-            }
-            colorchange = colorchange.substring(1);
-            clientgamestate.color = colorchange;
-            document.getElementById("colorupdateform").value = "";
+            clientgamestate.xpos += 1;
         }
+
+        gameArea.drawGame(JSON.parse(JSON.stringify(clientgamestate.roomdata)), false);
+    }
+    if (gameArea.keys && gameArea.keys[38]) {
+        if (clientgamestate.ypos <= -6) {
+            clientgamestate.ypos = -6;
+        }
+        else {
+            clientgamestate.ypos -= 1;
+        }
+
+        gameArea.drawGame(JSON.parse(JSON.stringify(clientgamestate.roomdata)), false);
+    }
+    else if (gameArea.keys && gameArea.keys[40]) {
+        if (clientgamestate.ypos >= 90) {
+            clientgamestate.ypos = 90;
+        }
+        else {
+            clientgamestate.ypos += 1;
+        }
+
+        gameArea.drawGame(JSON.parse(JSON.stringify(clientgamestate.roomdata)), false);
+    }
+
+}
+
+/**
+ * Validates color changes when they are entered.
+ */
+function updateColor() {
+    var colorchange = document.getElementById("colorupdateform").value;
+    if (colorchange === "")
+    {
+        document.getElementById("status").innerHTML = "You must enter a HEX color code.";
+        return;
+    }
+
+    if (!colorchange.startsWith('#'))
+    {
+        colorchange = '#'.concat(colorchange);
+    }
+    //blackbox regex that verifies color formatting
+    var validcolor = /(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)/i.test(colorchange);
+    if (!validcolor)
+    {
+        document.getElementById("status").innerHTML = "This is not a valid HEX color code. Try #E79380";
+        document.getElementById("colorupdateform").value = "";
+    }
+    else
+    {
+        colorchange = colorchange.substring(1);
+        clientgamestate.color = colorchange;
+        document.getElementById("status").innerHTML = "Color update change queued";
+        document.getElementById("colorupdateform").value = "";
+    }
+}
+
+/**
+ * Checks whether the client's state has deviated from the last known server state, which would prompt an update request.
+ */
+function toupdate() {
+    if (clientgamestate.xpos !== servergamestate.xpos ||
+        clientgamestate.ypos !== servergamestate.ypos ||
+        clientgamestate.color !== servergamestate.color) {
+        updategame();
     }
     else {
-        colorchange = clientgamestate.color;
+        window.setTimeout(function () { toupdate(); }, SERVER_PUSH_TIME);
     }
+}
+
+/**
+ * If the update change listener finds that the client state has deviated from the server state, it will prompt a message to the
+ * backend, sent here.
+ */
+function updategame() {
 
     var http = new XMLHttpRequest();
     http.onreadystatechange = function () {
@@ -290,13 +337,18 @@ function updategame(updatepos, updatefeat) {
         }
     };
 
-    if (updatepos || updatefeat) {
-        http.open("GET", "api/Room/UpdateGame/?playerid=" + clientgamestate.playerid + "&roomid=" + clientgamestate.roomid +
-            "&xpos=" + clientgamestate.xpos + "&ypos=" + clientgamestate.ypos + "&color=" + colorchange);
-        http.send();
-    }
+    //TODO should send the standard player JSON type, rather than individual fields
+    http.open("GET", "api/Room/UpdateGame/?playerid=" + clientgamestate.playerid + "&roomid=" + clientgamestate.roomid +
+        "&xpos=" + clientgamestate.xpos + "&ypos=" + clientgamestate.ypos + "&color=" + clientgamestate.color);
+    http.send();
 }
 
+/**
+ * Reaches in and gets the current game state. If it is the first time the game state is being retrieves, it writes over
+ * the client state to ensure that the client state begins as the server state.
+ * @param {any} overrideClientState
+ * @param {any} newgame
+ */
 function getgame(overrideClientState, newgame) {
     var http = new XMLHttpRequest();
     http.onreadystatechange = function () {
@@ -337,16 +389,18 @@ function getgame(overrideClientState, newgame) {
     http.send();
 }
 
+/**
+ * Responsible for ending the game. Pings the current room to initiate a room ending.
+ */
 function endgame() {
-    clearInterval(getgamerefresh);
-    clearInterval(updategamerefresh);
-    clearInterval(updategamerefresh);
+    clearInterval(drawgamerefresh);
 
     var http = new XMLHttpRequest();
     http.onreadystatechange = function () {
         if (http.readyState === 4) {
-            returnData = JSON.parse(http.responseText);
+            returnData = http.responseText;
             if (http.status < 400) {
+                location.reload();
                 if (returnData) {
                     document.getElementById("status").innerHTML = "Successfully logged out";
                 }
@@ -358,8 +412,37 @@ function endgame() {
         }
     };
 
-    http.open("GET", "api/RoomManager/EndGame/?playerid=" + clientgamestate.playerid + "&roomid=" + clientgamestate.roomid);
+    http.open("GET", "api/Room/EndGame/?playerid=" + clientgamestate.playerid + "&roomid=" + clientgamestate.roomid);
     http.send();
+}
 
-    location.reload();
+/**
+ * Statistics Section
+ * getPlayerstats
+ */
+
+function getPlayerStats() {
+
+    var http = new XMLHttpRequest();
+    http.onreadystatechange = function () {
+        if (http.readyState === 4) {
+            returnData = http.responseText;
+            if (http.status < 400) {
+                if (returnData) {
+                    returnData = JSON.parse(returnData);
+                    alert("Number of Accounts:" + returnData.numAccounts +
+                        "\nNumber of Players Logged in:" + returnData.numLoggedIn +
+                        "\nAverage Num Logins / Person:" + returnData.avgNumLogins +
+                        "\nAverage Account Age (seconds):" + returnData.avgAccountAge);
+                }
+                else { status.innerHTML = "stats error"; }
+            }
+            else {
+                document.getElementById("status").innerHTML = returnData.value;
+            }
+        }
+    };
+
+    http.open("GET", "api/Player/GetStats/");
+    http.send();
 }

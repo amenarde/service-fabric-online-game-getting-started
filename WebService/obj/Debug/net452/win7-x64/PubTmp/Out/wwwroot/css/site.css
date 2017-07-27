@@ -6,31 +6,6 @@
     font-size: 2vh;
 }
 
-
-.status_bar {
-    position: fixed;
-    z-index: 100;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background-color: whitesmoke;
-    color: darkslategray;
-}
-/* Login *************************************/
-.loginDiv {
-    position: absolute;
-    top: 5vh;
-    left: 12.5vw;
-    width: 75vw;
-    text-align: center;
-    
-}
-
-#logo {
-    font-family: 'Bungee Inline', cursive;
-    font-size: 10vh;
-}
-
 body input {
     text-align: center;
     width: 35%;
@@ -40,14 +15,7 @@ body input {
     padding: 10px;
 }
 
-.gameDiv input {
-    font-size: 1.5vh;
-    width: initial;
-}
 
-.gameDiv button {
-    height: 3vh;
-}
 
 body button {
     border: none;
@@ -69,6 +37,43 @@ body button:active {
     box-shadow: darkgrey 0px 0px;
 }
 
+/** Status Bar */
+
+.status_bar {
+    position: fixed;
+    z-index: 100;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: whitesmoke;
+    color: darkslategray;
+    height: auto;
+}
+
+.status_bar button{
+    width: 100px;
+    padding: 0px 0px;
+    height: auto;
+}
+
+/* Login Screen */
+
+.loginDiv {
+    position: absolute;
+    top: 5vh;
+    left: 12.5vw;
+    width: 75vw;
+    text-align: center;
+    
+}
+
+#logo {
+    font-family: 'Bungee Inline', cursive;
+    font-size: 10vh;
+}
+
+
+/** Displaying Rooms and New Room */
 
 .roomDiv {
     display: table;
@@ -76,7 +81,7 @@ body button:active {
     text-align: center;
 }
 
-.roomDiv input {
+.roomDiv input, .roomDiv select {
     width: 90%;
     border-radius: 8px;
     border: 0px;
@@ -89,23 +94,34 @@ body button:active {
     padding: 10px;
 }
 
-.gameDiv th, .gameDiv td {
-    border: 1px solid #ddd;
-    padding: 10px;
-}
+/** Game Buttons / Input */
 
 .gameDiv {
     position: absolute;
     left: 5vw;
     margin-right: 5vw;
+    padding: 8px;
 }
 
-/**********************************************/
+
+.gameDiv input {
+    font-size: 1.3vh;
+    width: initial;
+    width: 300px;
+}
+
+.gameDiv button {
+    height: 3vh;
+    width: auto;
+    text-align: center;
+}
+
+/** Game Canvas */
 
 canvas {
     position: absolute;
     left: 5vw;
-    top: 6vh;
+    top: 8vh;
     -moz-box-shadow: inset 0 0 10px #000000;
     -webkit-box-shadow: inset 0 0 10px #000000;
     box-shadow: inset 0 0 10px #000000;
