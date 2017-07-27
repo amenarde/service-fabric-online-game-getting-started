@@ -21,12 +21,35 @@ Using Service Fabric's stateful services, each of these services can maintain it
 ## Running this sample
 This application is only depends on Service Fabric, meaning deployment should be a breeze:
 
-1. Download and install the Visual Studio 2017 Service Fabric SDK [here](https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-get-started).
+1. Download and install the Visual Studio 2017 Service Fabric SDK [here][1].
 2. Open the .sln solution file in Visual Studio 2017.
 3. Press F5 to run.
+4. Open the application from the local web endpoint: `localhost:8081`
+
+## Deploying to cloud
+Deploying the application to the cloud is as easy as deploying it on your local box:
+
+1. Create a cluster to host your Service Fabric application. If you want to deploy to your own endpoint, skip to step `2`. To create a cluster on Azure, use the guide that can be found [here][2]. Below are the minimum necessary settings for this application:
+
+![Cluster Creation Image][options1]
+
+If you are deploying the application for personal use only, you can choose to leave the cluster unsecured.
+2. Edit the file at `SampleGame/SampleGame/ApplicationParameters/Cloud.xml`. Where it says `<ClusterConnectionParameters ConnectionEndpoint=""/>` enter the client endpoint provided to you by the cluster you set up.
+3. Right-click the application project in Visual Studio and select "Publish". Choose your cloud publish profile:
+
+![Cloud Parameter Image][publish]
+
+Enter the client endpoint that you just provided to your `Cloud.xml`.
+
+4. Connect to the game at your endpoint, at port 8081
 
 ## Next Steps
 This application was designed to be readable to someone without prior knowledge of Service Fabric. All important functions are documented XML-style in /docs, and there are also some general documents to support the readings:
 - [Learn about the application architecture and data flow.](../blob/master/docs/architecture.md)
 - [Walk through the implementation of a new feature in the game.](../blob/master/docs/newfeature.md)
 - [Deploy the application to the cloud.](../blob/master/docs/cloud.md)
+
+[1]: https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-get-started
+[2]: https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-cluster-creation-via-portal#create-cluster-in-the-azure-portal
+[options1]: ../blob/master/docs/media/options1.png
+[publish]: ../blob/master/docs/media/publish.png
