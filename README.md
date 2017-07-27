@@ -55,8 +55,8 @@ This application was designed to be readable to someone without prior knowledge 
 
 [1]: https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-get-started
 [2]: https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-cluster-creation-via-portal#create-cluster-in-the-azure-portal
-[3]: ../blob/master/docs/concepts.md
-[4]: ../blob/master/docs/architecture.md
-[5]: ../blob/master/docs/newfeature.md
+[3]: ../master/docs/concepts.md
+[4]: ../master/docs/architecture.md
+[5]: ../master/docs/newfeature.md
 [options1]: ../master/docs/media/options1.png
 [publish]: ../master/docs/media/publish.png
