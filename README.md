@@ -49,11 +49,14 @@ Enter the client endpoint that you just provided to your `Cloud.xml`.
 
 ## Next Steps
 This application was designed to be readable to someone without prior knowledge of Service Fabric. All important functions are documented XML-style in /docs, and there are also some general documents to support the readings:
-- [Learn about the application architecture and data flow.](../blob/master/docs/architecture.md)
-- [Walk through the implementation of a new feature in the game.](../blob/master/docs/newfeature.md)
-- [Learn important Service Fabric concepts to support your readthrough of the code](../blob/master/docs/concepts.md)
+- [Learn about the application architecture and data flow.][4]
+- [Walk through the implementation of a new feature in the game.][5]
+- [Learn important Service Fabric concepts to support your readthrough of the code][3]
 
 [1]: https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-get-started
 [2]: https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-cluster-creation-via-portal#create-cluster-in-the-azure-portal
+[3]: ../blob/master/docs/concepts.md
+[4]: ../blob/master/docs/architecture.md
+[5]: ../blob/master/docs/newfeature.md
 [options1]: ../master/docs/media/options1.png
 [publish]: ../master/docs/media/publish.png
