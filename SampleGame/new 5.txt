@@ -1,0 +1,131 @@
+               IReliableDictionary<string, PlayerPackage> playdict =
+                    await this.stateManager.GetOrAddAsync<IReliableDictionary<string, PlayerPackage>>(PlayersDictionaryName);
+
+                using (ITransaction tx = this.stateManager.CreateTransaction())
+                {
+                    ConditionalValue<PlayerPackage> playerOption = await playdict.TryGetValueAsync(tx, playerid, LockMode.Update);
+
+                    if (!playerOption.HasValue)
+                    {
+                        //Scenario: Player does not exist, make a new account
+                        Player p = new Player(0, 0, "ADD8E6");
+                        PlayerPackage pp = new PlayerPackage(p, LogState.InTransit, 1, DateTime.Now.ToUniversalTime(), roomid);
+                        await playdict.AddAsync(tx, playerid, pp);
+                        await tx.CommitAsync();
+
+
+                        int key = Partitioners.GetRoomPartition(roomid);
+                        string url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}&playerdata={JsonConvert.SerializeObject(p)}&PartitionKind=Int64Range&PartitionKey={key}";
+                        HttpResponseMessage response = await this.httpClient.GetAsync(url);
+                        string response_message = await response.Content.ReadAsStringAsync();
+                        if ((int)response.StatusCode == 200)
+                        {
+                            using (ITransaction tx1 = this.stateManager.CreateTransaction())
+                            {
+                                pp.state = LogState.LoggedIn;
+                                await playdict.SetAsync(tx1, playerid, pp);
+                                await tx1.CommitAsync();
+                                return new ContentResult { StatusCode = 200, Content = $"Successfully logged in" };
+                            }
+                        }
+                        else
+                        {
+                            return new ContentResult { StatusCode = 500, Content = $"Something went wrong, please retry" };
+                        }
+
+                    }
+                    else if (playerOption.Value.state == LogState.LoggedIn)
+                    {
+                        //Scenario: Player is already logged in, deny request
+                        await tx.CommitAsync();
+                        return new ContentResult { StatusCode = 400, Content = $"This player is already logged in" };
+                    }
+                    else if (playerOption.Value.state == LogState.InTransit)
+                    {
+                        //Scenario: There was a failure and player state must be investigated
+                        //Ping the room to see if the player exists
+                        await tx.CommitAsync();
+                        int key = Partitioners.GetRoomPartition(playerOption.Value.roomid);
+                        string url = this.proxy + $"Exists/?playerid={playerid}&roomid={playerOption.Value.roomid}&PartitionKind=Int64Range&PartitionKey={key}";
+                        HttpResponseMessage response = await this.httpClient.GetAsync(url);
+
+                        string message = await response.Content.ReadAsStringAsync();
+
+                        if (message == "true")
+                        {
+                            //Case 1: Player is logged in, in same room
+                            if (playerOption.Value.roomid == roomid)
+                            {
+                                using (ITransaction tx1 = this.stateManager.CreateTransaction())
+                                {
+                                    PlayerPackage pp = playerOption.Value;
+                                    pp.state = LogState.LoggedIn;
+                                    pp.numLogins++;
+                                    await playdict.SetAsync(tx1, playerid, pp);
+                                    await tx1.CommitAsync();
+                                    return new ContentResult { StatusCode = 200, Content = $"Successfully logged in" };
+                                }
+                            }
+                            else
+                            {
+                                //Case 1.1 Player is logged in, but to a different room, do nothing
+                                return new ContentResult { StatusCode = 400, Content = $"This player is already logged in" };
+                            }
+                        }
+                        else if (message == "InTransit")
+                        {
+                            //Case 2: This should not be possible in the matrix of state
+                            throw new NotSupportedException("Double InTransit unsupported scenario");
+                        }
+                        else if (message == "LoggedOut")
+                        {
+                            //Case 3: someone initiated a newgame but it did not complete
+                            int key2 = Partitioners.GetRoomPartition(roomid);
+                            string url2 = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}&playerdata={playerOption.Value.player}&PartitionKind=Int64Range&PartitionKey={key}";
+                            HttpResponseMessage response2 = await this.httpClient.GetAsync(url);
+                            if ((int)response2.StatusCode == 200)
+                            {
+                                using (ITransaction tx1 = this.stateManager.CreateTransaction())
+                                {
+                                    PlayerPackage pp = playerOption.Value;
+                                    pp.state = LogState.LoggedIn;
+                                    pp.numLogins++;
+                                    await playdict.SetAsync(tx1, playerid, pp);
+                                    await tx1.CommitAsync();
+                                    return new ContentResult { StatusCode = 200, Content = $"Successfully logged in" };
+                                }
+                            }
+                            else
+                            {
+                                return new ContentResult { StatusCode = 500, Content = $"Something went wrong, please retry" };
+                            }
+                        }
+                    }
+                    else if (playerOption.Value.state == LogState.LoggedOut)
+                    {
+                        int key = Partitioners.GetRoomPartition(roomid);
+                        string url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}&playerdata={playerOption.Value.player}&PartitionKind=Int64Range&PartitionKey={key}";
+                        HttpResponseMessage response = await this.httpClient.GetAsync(url);
+
+                        if ((int)response.StatusCode == 200)
+                        {
+                            using (ITransaction tx1 = this.stateManager.CreateTransaction())
+                            {
+                                PlayerPackage pp = playerOption.Value;
+                                pp.state = LogState.LoggedIn;
+                                pp.numLogins++;
+                                await playdict.SetAsync(tx1, playerid, pp);
+                                await tx1.CommitAsync();
+                                return new ContentResult { StatusCode = 200, Content = $"Successfully logged in" };
+                            }
+                        }
+                        else
+                        {
+                            return new ContentResult { StatusCode = 500, Content = $"Something went wrong, please retry" };
+                        }
+
+                    }
+
+                }
+
+                return new ContentResult { StatusCode = 500, Content = $"Something went wrong, please retry" };
