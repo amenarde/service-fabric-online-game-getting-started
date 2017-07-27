@@ -34,7 +34,9 @@ Deploying the application to the cloud is as easy as deploying it on your local 
 ![Cluster Creation Image][options1]
 
 If you are deploying the application for personal use only, you can choose to leave the cluster unsecured.
+
 2. Edit the file at `SampleGame/SampleGame/ApplicationParameters/Cloud.xml`. Where it says `<ClusterConnectionParameters ConnectionEndpoint=""/>` enter the client endpoint provided to you by the cluster you set up.
+
 3. Right-click the application project in Visual Studio and select "Publish". Choose your cloud publish profile:
 
 ![Cloud Parameter Image][publish]
