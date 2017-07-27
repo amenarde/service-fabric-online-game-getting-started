@@ -35,7 +35,7 @@ namespace PlayerManager.Controllers
 
             this.uri = $"{ this.configSettings.ReverseProxyPort}/" +
                 $"{this.serviceContext.CodePackageActivationContext.ApplicationName.Replace("fabric:/", "")}";
-            this.proxy = $"http://localhost:{this.uri}/" +
+            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:{this.uri}/" +
                 $"{this.configSettings.RoomManagerName}/api/RoomStore/";
         }
 

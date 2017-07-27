@@ -40,7 +40,7 @@ namespace WebService.Controllers
 
             this.uri = $"{ this.configSettings.ReverseProxyPort}/" +
                 $"{this.serviceContext.CodePackageActivationContext.ApplicationName.Replace("fabric:/", "")}";
-            this.proxy = $"http://localhost:{this.uri}/" +
+            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:{this.uri}/" +
                 $"{this.configSettings.PlayerManagerName}/api/PlayerStore/";
 
         }
@@ -49,6 +49,7 @@ namespace WebService.Controllers
         [HttpGet]
         public async Task<IActionResult> NewGame(string playerid, string roomid)
         {
+
             int key = Partitioners.GetPlayerPartition(playerid);
             string url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}&PartitionKind=Int64Range&PartitionKey={key}";
 

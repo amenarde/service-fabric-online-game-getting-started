@@ -430,10 +430,10 @@ function getPlayerStats() {
             if (http.status < 400) {
                 if (returnData) {
                     returnData = JSON.parse(returnData);
-                    alert("Number of Accounts:" + returnData.numAccounts +
-                        "\nNumber of Players Logged in:" + returnData.numLoggedIn +
-                        "\nAverage Num Logins / Person:" + returnData.avgNumLogins +
-                        "\nAverage Account Age (seconds):" + returnData.avgAccountAge);
+                    alert("Number of Accounts: " + returnData.numAccounts +
+                        "\nNumber of Players Logged in: " + returnData.numLoggedIn +
+                        "\nAverage Num Logins / Person: " + returnData.avgNumLogins +
+                        "\nAverage Account Age (seconds) :" + returnData.avgAccountAge);
                 }
                 else { status.innerHTML = "stats error"; }
             }

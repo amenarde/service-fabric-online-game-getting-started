@@ -10,7 +10,7 @@ namespace Common
     {
         public static int Main(string[] args)
         {
-            string clusterConnection = "localhost:8081";
+            string clusterConnection = $"{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:1801";
 
             Console.WriteLine("Starting Chaos Test Scenario...");
             try
