@@ -17,5 +17,5 @@ Here is a look at how different actions by the user get routed through the appli
 ![Route Diagram][route]
 
 
-[architecture]: ../master/docs/media/architecture.png
-[route]: ../master/docs/media/routes.png
+[architecture]: ../docs/media/architecture.png
+[route]: ../docs/media/routes.png
