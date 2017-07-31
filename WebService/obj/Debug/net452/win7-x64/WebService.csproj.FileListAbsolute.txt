@@ -117,3 +117,4 @@ c:\users\t-anmena.redmond\documents\visual studio 2017\Projects\SampleGame\WebSe
 c:\users\t-anmena.redmond\documents\visual studio 2017\Projects\SampleGame\WebService\bin\Debug\net452\win7-x64\Common.pdb
 c:\users\t-anmena.redmond\documents\visual studio 2017\Projects\SampleGame\WebService\obj\Debug\net452\win7-x64\WebService.exe
 c:\users\t-anmena.redmond\documents\visual studio 2017\Projects\SampleGame\WebService\obj\Debug\net452\win7-x64\WebService.pdb
+C:\Users\t-anmena.REDMOND\Documents\Visual Studio 2017\Projects\SampleGame\WebService\bin\Debug\net452\win7-x64\WebService.xml

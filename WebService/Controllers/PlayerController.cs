@@ -47,11 +47,11 @@ namespace WebService.Controllers
 
         [Route("api/[controller]/NewGame")]
         [HttpGet]
-        public async Task<IActionResult> NewGame(string playerid, string roomid)
+        public async Task<IActionResult> NewGame(string playerid, string roomid, string roomtype)
         {
 
             int key = Partitioners.GetPlayerPartition(playerid);
-            string url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}&PartitionKind=Int64Range&PartitionKey={key}";
+            string url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}&roomtype={roomtype}&PartitionKind=Int64Range&PartitionKey={key}";
 
             HttpResponseMessage response = await this.httpClient.GetAsync(url);
             return this.StatusCode((int)response.StatusCode, this.Json(await response.Content.ReadAsStringAsync()));

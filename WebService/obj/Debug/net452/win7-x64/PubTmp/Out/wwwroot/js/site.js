@@ -28,7 +28,8 @@ var clientgamestate = {
     'xpos': 0,
     'ypos': 0,
     'color': null,
-    'roomdata': null
+    'roomdata': null,
+    'roomtype': null
 };
 var servergamestate = {
     'xpos': 0,
@@ -72,12 +73,22 @@ window.addEventListener('beforeunload', function (event) {
  */
 function newgame(bool, context) {
 
-    if (bool == true) {
-        var roomid = context.name;
+    //Decides where to get room name
+    var roomid; var roomtype;
+    var playerid = document.getElementById("pidform").value;
+
+    if (bool === true) {
+        roomid = context.name.substring(0, context.name.indexOf(','));
+        roomtype = context.name.substring(context.name.indexOf(',') + 1);
     }
     else {
-        var roomid = document.getElementById("newgamename").value;
+        roomid = document.getElementById("newgamename").value;
+        roomtype = document.getElementById("newgametype").value;
     }
+
+    if (roomid === "") { document.getElementById("status").innerHTML = "Please enter a room name"; return; }
+    if (playerid === "") { document.getElementById("status").innerHTML = "Please enter a username"; return; }
+    if (roomtype === "") { document.getElementById("status").innerHTML = "Something went wrong with room typing"; return; }
 
     var http = new XMLHttpRequest();
     http.onreadystatechange = function () {
@@ -87,9 +98,11 @@ function newgame(bool, context) {
                 if (returnData) {
                     document.getElementById("status").innerHTML = "Successfully logged in";
 
+                    clientgamestate.roomtype = returnData.value;
+
                     clearInterval(showroomrefresh);
 
-                    clientgamestate.playerid = document.getElementById("pidform").value;
+                    clientgamestate.playerid = playerid;
                     clientgamestate.roomid = roomid;
 
                     //initialize canvas
@@ -102,7 +115,7 @@ function newgame(bool, context) {
                     document.getElementsByClassName("gameDiv")[0].style.display = '';
                     document.getElementsByClassName("loginDiv")[0].style.display = 'none';
                 }
-                else { status.innerHTML = "newgame error"; }
+                else { document.getElementById("status").innerHTML = "Something went wrong, please referesh webpage"; }
             }
             else {
                 document.getElementById("status").innerHTML = returnData.value;
@@ -110,7 +123,7 @@ function newgame(bool, context) {
         }
     };
 
-    http.open("GET", "api/Player/NewGame/?playerid=" + document.getElementById("pidform").value + "&roomid=" + roomid);
+    http.open("GET", "api/Player/NewGame/?playerid=" + document.getElementById("pidform").value + "&roomid=" + roomid + "&roomtype=" + roomtype);
     http.send();
 }
 
@@ -157,12 +170,13 @@ function showrooms(firsttime) {
 
                         typecell = row.insertCell();
                         type = document.createElement('select');
-                        for (var i = 0; i < ROOM_OPTIONS.length; i++) {
+                        for (i = 0; i < ROOM_OPTIONS.length; i++) {
                             var option = document.createElement("option");
                             option.value = ROOM_OPTIONS[i];
                             option.text = ROOM_OPTIONS[i];
                             type.appendChild(option);
                         }
+                        type.setAttribute('id', 'newgametype');
                         typecell.appendChild(type);
 
                         numcell = row.insertCell(); num = document.createTextNode(""); numcell.appendChild(num);
@@ -170,7 +184,7 @@ function showrooms(firsttime) {
                         buttoncell = row.insertCell();
                         button = document.createElement("button");
                         button.setAttribute('type', 'button');
-                        button.setAttribute('id', "newgamebutton")
+                        button.setAttribute('id', "newgamebutton");
                         button.setAttribute('onclick', 'newgame(false, this)');
                         buttoncell.appendChild(button);
                     }
@@ -181,7 +195,7 @@ function showrooms(firsttime) {
                     }
 
                     //Populate table with new room data
-                    for (var i = 0; i < returnData.length; i++) {
+                    for (i = 0; i < returnData.length; i++) {
                         row = table.insertRow();
                         namecell = row.insertCell(); name = document.createTextNode(returnData[i].Key); namecell.appendChild(name);
                         typecell = row.insertCell(); type = document.createTextNode(returnData[i].Value.roomtype); typecell.appendChild(type);
@@ -190,18 +204,18 @@ function showrooms(firsttime) {
                         buttoncell = row.insertCell();
                         button = document.createElement("button");
                         button.setAttribute('type', 'button');
-                        button.setAttribute('name', returnData[i].Key);
+                        button.setAttribute('name', returnData[i].Key + "," + returnData[i].Value.roomtype );
                         button.setAttribute('onclick', 'newgame(true, this)');
                         buttoncell.appendChild(button);
                     }
 
                 }
                 else {
-                    status.innerHTML = "getgame error";
+                    document.getElementById("status").innerHTML = "Something went wrong, please referesh webpage";
                 }
             }
             else {
-                document.getElementById("status").innerHTML = returnData;
+                document.getElementById("status").innerHTML = returnData.value;
             }
         }
     };
@@ -346,15 +360,15 @@ function updategame() {
 /**
  * Reaches in and gets the current game state. If it is the first time the game state is being retrieves, it writes over
  * the client state to ensure that the client state begins as the server state.
- * @param {any} overrideClientState
- * @param {any} newgame
+ * @param {any} overrideClientState Run during newgame to sync both states
+ * @param {any} newgame Begins some of the long term running application during initialization
  */
 function getgame(overrideClientState, newgame) {
     var http = new XMLHttpRequest();
     http.onreadystatechange = function () {
         if (http.readyState === 4) {
             returnData = http.responseText;
-            if (http.status == 500) {
+            if (http.status === 500) {
                 window.setTimeout(getgame(false, false), SERVER_READ_TIME);
             }
             else if (http.status < 400) {

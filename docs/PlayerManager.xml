@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>PlayerManager</name>
+    </assembly>
+    <members>
+        <member name="T:PlayerManager.ConfigSettings">
+            <summary>
+            Runs to establish configuration for this service. Does this vis-a-vis ApplicationPackageRoot/ApplicationManifest.xml
+            </summary>
+        </member>
+        <member name="M:PlayerManager.ConfigSettings.#ctor(System.Fabric.StatefulServiceContext)">
+            <summary>
+            Configures to the current context.
+            </summary>
+            <param name="context"></param>
+        </member>
+        <member name="P:PlayerManager.ConfigSettings.RoomManagerName">
+            <summary>
+            This reference is used by the stateful service controller in order to correctly route requests to the service.
+            </summary>
+        </member>
+        <member name="P:PlayerManager.ConfigSettings.ReverseProxyPort">
+            <summary>
+            Called to dynamically get the correct port that related services will have open.
+            </summary>
+        </member>
+        <member name="T:PlayerManager.Controllers.PlayerStoreController">
+            <summary>
+            The role of this controller is to manage the state of players that are offline. The dictionary in this service will on average
+            hold much more data than a room dictionary, but handle a lot less throughput (Cold Storage). It handles starting and ending games
+            by transfering data to and from cold storage, and maintaining longer term account information like account age, settings, and
+            how often an account is used.
+            </summary>
+        </member>
+        <member name="M:PlayerManager.Controllers.PlayerStoreController.#ctor(System.Fabric.StatefulServiceContext,System.Net.Http.HttpClient,System.Fabric.FabricClient,PlayerManager.ConfigSettings,Microsoft.ServiceFabric.Data.IReliableStateManager)">
+            <summary>
+            This constructor will execute on 
+            </summary>
+            <param name="serviceContext"></param>
+            <param name="httpClient"></param>
+            <param name="fabricClient"></param>
+            <param name="settings"></param>
+            <param name="stateManager"></param>
+        </member>
+        <member name="T:PlayerManager.PlayerManager">
+            <summary>
+            The FabricRuntime creates an instance of this class for each service type instance. 
+            </summary>
+        </member>
+        <member name="M:PlayerManager.PlayerManager.CreateServiceReplicaListeners">
+            <summary>
+            Optional override to create listeners (like tcp, http) for this service instance.
+            </summary>
+            <returns>The collection of listeners.</returns>
+        </member>
+        <member name="M:PlayerManager.Program.Main">
+            <summary>
+            This is the entry point of the service host process.
+            </summary>
+        </member>
+    </members>
+</doc>

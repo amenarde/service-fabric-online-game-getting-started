@@ -32,7 +32,21 @@ var gameArea = {
     },
     drawGame: function (returnData, overrideClientState) {
         gameArea.clear();
-        roomDraw(this.context, Math.min(this.canvas.width, this.canvas.height), "img/room.png");
+
+        //Figure out which room to draw
+        if (clientgamestate.roomtype === "Office") {
+            roomDraw(this.context, Math.min(this.canvas.width, this.canvas.height), "img/office.png");
+        }
+        else if (clientgamestate.roomtype === "Garden") {
+            roomDraw(this.context, Math.min(this.canvas.width, this.canvas.height), "img/garden.png");
+        }
+        else if (clientgamestate.roomtype === "Cafe") {
+            roomDraw(this.context, Math.min(this.canvas.width, this.canvas.height), "img/cafe.png");
+        }
+        else {
+            roomDraw(this.context, Math.min(this.canvas.width, this.canvas.height), "img/room.png");
+        }
+        
 
         clientgamestate.roomdata = returnData;
         for (var i = 0; i < returnData.length; i++) {

@@ -44,7 +44,7 @@ namespace RoomManager.Controllers
 
         [Route("api/[controller]/NewGame")]
         [HttpGet]
-        public async Task<IActionResult> NewGame(string roomid, string playerid, string playerdata)
+        public async Task<IActionResult> NewGame(string roomid, string playerid, string playerdata, string roomtype)
         {
             try
             {
@@ -62,7 +62,7 @@ namespace RoomManager.Controllers
                     if (!roomOption.HasValue)
                     {
                         //Scenario: Room does not exist yet
-                        await roomdict.AddAsync(tx, roomid, new Room(1, "default"));
+                        await roomdict.AddAsync(tx, roomid, new Room(1, roomtype));
                     }
                     else
                     {

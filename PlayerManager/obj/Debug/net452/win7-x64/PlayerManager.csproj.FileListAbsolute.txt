@@ -113,3 +113,4 @@ c:\users\t-anmena.redmond\documents\visual studio 2017\Projects\SampleGame\Playe
 c:\users\t-anmena.redmond\documents\visual studio 2017\Projects\SampleGame\PlayerManager\obj\Debug\net452\win7-x64\PlayerManager.pdb
 C:\Users\t-anmena.REDMOND\documents\visual studio 2017\Projects\SampleGame\PlayerManager\bin\Debug\net452\win7-x64\Common.dll
 C:\Users\t-anmena.REDMOND\documents\visual studio 2017\Projects\SampleGame\PlayerManager\bin\Debug\net452\win7-x64\Common.pdb
+C:\Users\t-anmena.REDMOND\Documents\Visual Studio 2017\Projects\SampleGame\PlayerManager\bin\Debug\net452\win7-x64\PlayerManager.xml

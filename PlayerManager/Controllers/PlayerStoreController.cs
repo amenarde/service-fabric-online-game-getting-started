@@ -12,6 +12,12 @@ using Microsoft.ServiceFabric.Data.Collections;
 
 namespace PlayerManager.Controllers
 {
+    /// <summary>
+    /// The role of this controller is to manage the state of players that are offline. The dictionary in this service will on average
+    /// hold much more data than a room dictionary, but handle a lot less throughput (Cold Storage). It handles starting and ending games
+    /// by transfering data to and from cold storage, and maintaining longer term account information like account age, settings, and
+    /// how often an account is used.
+    /// </summary>
     public class PlayerStoreController : Controller
     {
         private readonly HttpClient httpClient;
@@ -25,6 +31,14 @@ namespace PlayerManager.Controllers
         private readonly string uri;
         private readonly string proxy;
 
+        /// <summary>
+        /// This constructor will execute on 
+        /// </summary>
+        /// <param name="serviceContext"></param>
+        /// <param name="httpClient"></param>
+        /// <param name="fabricClient"></param>
+        /// <param name="settings"></param>
+        /// <param name="stateManager"></param>
         public PlayerStoreController(StatefulServiceContext serviceContext, HttpClient httpClient, FabricClient fabricClient, ConfigSettings settings, IReliableStateManager stateManager)
         {
             this.stateManager = stateManager;
@@ -42,7 +56,7 @@ namespace PlayerManager.Controllers
 
         [Route("api/[controller]/NewGame")]
         [HttpGet]
-        public async Task<IActionResult> NewGame(string playerid, string roomid)
+        public async Task<IActionResult> NewGame(string playerid, string roomid, string roomtype)
         {
             try
             {
@@ -66,12 +80,13 @@ namespace PlayerManager.Controllers
                         int key = Partitioners.GetRoomPartition(roomid);
                         string url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}" +
                             $"&playerdata={JsonConvert.SerializeObject(p)}" +
+                            $"&roomtype={roomtype}" + 
                             $"&PartitionKind=Int64Range&PartitionKey={key}";
                         HttpResponseMessage response = await this.httpClient.GetAsync(url);
                         string response_message = await response.Content.ReadAsStringAsync();
                         if ((int)response.StatusCode == 200)
                         {
-                            return new ContentResult { StatusCode = 200, Content = response_message };
+                            return new ContentResult { StatusCode = 200, Content = roomtype };
                         }
                         else
                         {
@@ -98,12 +113,13 @@ namespace PlayerManager.Controllers
                         int key = Partitioners.GetRoomPartition(roomid);
                         string url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}" +
                             $"&playerdata={JsonConvert.SerializeObject(playerOption.Value.player)}" +
+                            $"&roomtype={roomtype}" +
                             $"&PartitionKind=Int64Range&PartitionKey={key}";
                         HttpResponseMessage response = await this.httpClient.GetAsync(url);
                         string response_message = await response.Content.ReadAsStringAsync();
                         if ((int)response.StatusCode == 200)
                         {
-                            return new ContentResult { StatusCode = 200, Content = response_message };
+                            return new ContentResult { StatusCode = 200, Content = roomtype };
                         }
                         else
                         {
@@ -144,12 +160,13 @@ namespace PlayerManager.Controllers
                                     key = Partitioners.GetRoomPartition(roomid);
                                     url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}" +
                                         $"&playerdata={JsonConvert.SerializeObject(pp.player)}" +
+                                        $"&roomtype={roomtype}" +
                                         $"&PartitionKind=Int64Range&PartitionKey={key}";
                                     response = await this.httpClient.GetAsync(url);
                                     response_message = await response.Content.ReadAsStringAsync();
                                     if ((int)response.StatusCode == 200)
                                     {
-                                        return new ContentResult { StatusCode = 200, Content = response_message };
+                                        return new ContentResult { StatusCode = 200, Content = roomtype };
                                     }
                                     else
                                     {

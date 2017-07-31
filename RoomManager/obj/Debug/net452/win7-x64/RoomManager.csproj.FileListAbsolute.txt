@@ -113,3 +113,4 @@ c:\users\t-anmena.redmond\documents\visual studio 2017\Projects\SampleGame\RoomM
 c:\users\t-anmena.redmond\documents\visual studio 2017\Projects\SampleGame\RoomManager\obj\Debug\net452\win7-x64\RoomManager.pdb
 C:\Users\t-anmena.REDMOND\documents\visual studio 2017\Projects\SampleGame\RoomManager\bin\Debug\net452\win7-x64\Common.dll
 C:\Users\t-anmena.REDMOND\documents\visual studio 2017\Projects\SampleGame\RoomManager\bin\Debug\net452\win7-x64\Common.pdb
+C:\Users\t-anmena.REDMOND\Documents\Visual Studio 2017\Projects\SampleGame\RoomManager\bin\Debug\net452\win7-x64\RoomManager.xml

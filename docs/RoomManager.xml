@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>RoomManager</name>
+    </assembly>
+    <members>
+        <member name="T:RoomManager.ConfigSettings">
+            <summary>
+            Runs to establish configuration for this service. Does this vis-a-vis ApplicationPackageRoot/ApplicationManifest.xml
+            </summary>
+        </member>
+        <member name="M:RoomManager.ConfigSettings.#ctor(System.Fabric.StatefulServiceContext)">
+            <summary>
+            Configures to the current context.
+            </summary>
+            <param name="context"></param>
+        </member>
+        <member name="P:RoomManager.ConfigSettings.PlayerManagerName">
+            <summary>
+            This reference is used by the stateful service controller in order to correctly route requests to the service.
+            </summary>
+        </member>
+        <member name="P:RoomManager.ConfigSettings.ReverseProxyPort">
+            <summary>
+            Called to dynamically get the correct port that related services will have open.
+            </summary>
+        </member>
+        <member name="M:RoomManager.Program.Main">
+            <summary>
+            This is the entry point of the service host process.
+            </summary>
+        </member>
+        <member name="T:RoomManager.RoomManager">
+            <summary>
+            The FabricRuntime creates an instance of this class for each service type instance. 
+            </summary>
+        </member>
+        <member name="M:RoomManager.RoomManager.CreateServiceReplicaListeners">
+            <summary>
+            Optional override to create listeners (like tcp, http) for this service instance.
+            </summary>
+            <returns>The collection of listeners.</returns>
+        </member>
+    </members>
+</doc>

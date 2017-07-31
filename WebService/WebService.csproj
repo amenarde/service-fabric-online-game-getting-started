@@ -6,6 +6,10 @@
     <IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DocumentationFile>..\docs\WebService.xml</DocumentationFile>
+  </PropertyGroup>
+
   <ItemGroup>
     <Content Include="wwwroot\css\game.css" />
     <Content Include="wwwroot\css\site.css" />

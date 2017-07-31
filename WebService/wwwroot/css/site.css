@@ -10,7 +10,7 @@ body input {
     text-align: center;
     width: 35%;
     border-radius: 8px;
-    border: 0px;
+    border: 0;
     font-size: 2vh;
     padding: 10px;
 }
@@ -34,7 +34,7 @@ body button {
 body button:active {
     margin-left: 4px;
     margin-top: 4px;
-    box-shadow: darkgrey 0px 0px;
+    box-shadow: darkgrey 0 0;
 }
 
 /** Status Bar */
@@ -52,7 +52,7 @@ body button:active {
 
 .status_bar button{
     width: 100px;
-    padding: 0px 0px;
+    padding: 0 0;
     height: auto;
 }
 
@@ -84,7 +84,7 @@ body button:active {
 .roomDiv input, .roomDiv select {
     width: 90%;
     border-radius: 8px;
-    border: 0px;
+    border: 0;
     font-size: 2vh;
     padding: 10px;
 }
