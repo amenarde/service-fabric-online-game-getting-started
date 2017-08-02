@@ -19,8 +19,10 @@ namespace PlayerManager.Controllers
 
     /// <summary>
     ///     The role of this controller is to manage the state of players that are offline. The dictionary in this service will
-    ///     on average hold much more data than a room dictionary, but handle a lot less throughput (Cold Storage). It handles starting
-    ///     and ending games by transfering data to and from cold storage, and maintaining longer term account information like account age,
+    ///     on average hold much more data than a room dictionary, but handle a lot less throughput (Cold Storage). It handles
+    ///     starting
+    ///     and ending games by transfering data to and from cold storage, and maintaining longer term account information like
+    ///     account age,
     ///     settings, and how often an account is used.
     /// </summary>
     public class PlayerStoreController : Controller
@@ -56,9 +58,11 @@ namespace PlayerManager.Controllers
         }
 
         /// <summary>
-        /// Coordinates the new game process. This entails either gathering the player data or creating a new player, and handing that
-        /// data off to an active room. It coordinates the current state of the player by using the LogState of the player here and the
-        /// existence of the player in the room.
+        ///     Coordinates the new game process. This entails either gathering the player data or creating a new player, and
+        ///     handing that
+        ///     data off to an active room. It coordinates the current state of the player by using the LogState of the player here
+        ///     and the
+        ///     existence of the player in the room.
         /// </summary>
         /// <param name="playerid"></param>
         /// <param name="roomid"></param>
@@ -70,6 +74,9 @@ namespace PlayerManager.Controllers
         {
             try
             {
+                if (!PlayerManager.WriteQuorum)
+                    return new ContentResult {StatusCode = 500, Content = "Awaiting write quorum, please retry."};
+
                 IReliableDictionary<string, PlayerPackage> playdict =
                     await this.stateManager.GetOrAddAsync<IReliableDictionary<string, PlayerPackage>>(PlayersDictionaryName);
 
@@ -94,8 +101,9 @@ namespace PlayerManager.Controllers
                                      $"&PartitionKind=Int64Range&PartitionKey={key}";
                         HttpResponseMessage response = await this.httpClient.GetAsync(url);
                         string responseMessage = await response.Content.ReadAsStringAsync();
-                        return (int) response.StatusCode == 200 ? new ContentResult {StatusCode = 200, Content = roomtype} : 
-                            new ContentResult {StatusCode = 500, Content = responseMessage};
+                        return (int) response.StatusCode == 200
+                            ? new ContentResult {StatusCode = 200, Content = roomtype}
+                            : new ContentResult {StatusCode = 500, Content = responseMessage};
                     }
                     switch (playerOption.Value.State)
                     {
@@ -157,8 +165,9 @@ namespace PlayerManager.Controllers
                                               $"&PartitionKind=Int64Range&PartitionKey={key}";
                                         response = await this.httpClient.GetAsync(url);
                                         responseMessage = await response.Content.ReadAsStringAsync();
-                                        return (int) response.StatusCode == 200 ? new ContentResult {StatusCode = 200, Content = roomtype} : 
-                                            new ContentResult {StatusCode = 500, Content = responseMessage};
+                                        return (int) response.StatusCode == 200
+                                            ? new ContentResult {StatusCode = 200, Content = roomtype}
+                                            : new ContentResult {StatusCode = 500, Content = responseMessage};
                                     }
                             }
                             else
@@ -188,6 +197,9 @@ namespace PlayerManager.Controllers
         {
             try
             {
+                if (!PlayerManager.WriteQuorum)
+                    return new ContentResult { StatusCode = 500, Content = "Awaiting write quorum, please retry." };
+
                 Player player = JsonConvert.DeserializeObject<Player>(playerdata);
                 IReliableDictionary<string, PlayerPackage> playdict =
                     await this.stateManager.GetOrAddAsync<IReliableDictionary<string, PlayerPackage>>(PlayersDictionaryName);
@@ -234,6 +246,9 @@ namespace PlayerManager.Controllers
         {
             try
             {
+                if (!PlayerManager.WriteQuorum)
+                    return new ContentResult { StatusCode = 500, Content = "Awaiting write quorum, please retry." };
+
                 IReliableDictionary<string, PlayerPackage> playdict =
                     await this.stateManager.GetOrAddAsync<IReliableDictionary<string, PlayerPackage>>(PlayersDictionaryName);
 

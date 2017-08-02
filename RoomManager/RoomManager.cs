@@ -7,6 +7,8 @@ using Microsoft.ServiceFabric.Services.Communication.AspNetCore;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
 using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace RoomManager
 {
@@ -19,6 +21,11 @@ namespace RoomManager
             : base(context)
         { }
 
+        public static bool WriteQuorum;
+        protected override async Task RunAsync(CancellationToken cancellationToken)
+        {
+            WriteQuorum = true;
+        }
 
         /// <summary>
         /// Optional override to create listeners (like tcp, http) for this service instance.

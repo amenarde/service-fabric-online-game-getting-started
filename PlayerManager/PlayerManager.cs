@@ -7,9 +7,13 @@ using Microsoft.ServiceFabric.Services.Communication.AspNetCore;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
 using System.Net.Http;
+using System.Threading;
 
 namespace PlayerManager
 {
+    using System.Runtime.Remoting.Messaging;
+    using System.Threading.Tasks;
+
     /// <summary>
     /// The FabricRuntime creates an instance of this class for each service type instance. 
     /// </summary>
@@ -18,6 +22,12 @@ namespace PlayerManager
         public PlayerManager(StatefulServiceContext context)
             : base(context)
         { }
+
+        public static bool WriteQuorum;
+        protected override async Task RunAsync(CancellationToken cancellationToken)
+        {
+            WriteQuorum = true;
+        }
 
         /// <summary>
         /// Optional override to create listeners (like tcp, http) for this service instance.

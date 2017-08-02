@@ -48,6 +48,9 @@ namespace RoomManager.Controllers
         {
             try
             {
+                if (!RoomManager.WriteQuorum)
+                    return new ContentResult { StatusCode = 500, Content = "Awaiting write quorum, please retry." };
+
                 Player player = JsonConvert.DeserializeObject<Player>(playerdata);
 
                 IReliableDictionary<string, Room> roomdict =
@@ -92,6 +95,9 @@ namespace RoomManager.Controllers
         {
             try
             {
+                if (!RoomManager.WriteQuorum)
+                    return new ContentResult { StatusCode = 500, Content = "Awaiting write quorum, please retry." };
+
                 IReliableDictionary<string, Room> roomdict =
                     await this.stateManager.GetOrAddAsync<IReliableDictionary<string, Room>>(RoomDictionaryName);
 
@@ -121,6 +127,9 @@ namespace RoomManager.Controllers
         {
             try
             {
+                if (!RoomManager.WriteQuorum)
+                    return new ContentResult { StatusCode = 500, Content = "Awaiting write quorum, please retry." };
+
                 IReliableDictionary<string, Room> roomdict =
                     await this.stateManager.GetOrAddAsync<IReliableDictionary<string, Room>>(RoomDictionaryName);
 
@@ -147,6 +156,9 @@ namespace RoomManager.Controllers
         {
             try
             {
+                if (!RoomManager.WriteQuorum)
+                    return new ContentResult { StatusCode = 500, Content = "Awaiting write quorum, please retry." };
+
                 IReliableDictionary<string, Room> roomdict =
                     await this.stateManager.GetOrAddAsync<IReliableDictionary<string, Room>>(RoomDictionaryName);
 
@@ -179,6 +191,9 @@ namespace RoomManager.Controllers
         {
             try
             {
+                if (!RoomManager.WriteQuorum)
+                    return new ContentResult { StatusCode = 500, Content = "Awaiting write quorum, please retry." };
+
                 Player p = JsonConvert.DeserializeObject<Player>(playerdata);
 
                 IReliableDictionary<string, Room> roomdict =
@@ -226,6 +241,9 @@ namespace RoomManager.Controllers
         {
             try
             {
+                if (!RoomManager.WriteQuorum)
+                    return new ContentResult { StatusCode = 500, Content = "Awaiting write quorum, please retry." };
+
                 IReliableDictionary<string, Room> roomdict =
                     await this.stateManager.GetOrAddAsync<IReliableDictionary<string, Room>>(RoomDictionaryName);
 
