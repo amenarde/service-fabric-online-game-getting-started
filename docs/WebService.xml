@@ -32,8 +32,9 @@
         </member>
         <member name="M:WebService.Controllers.PlayerController.#ctor(System.Fabric.StatelessServiceContext,System.Net.Http.HttpClient,System.Fabric.FabricClient,WebService.ConfigSettings)">
             <summary>
-            Receives the context of the webservice the controller is operating in, the context of the Fabric client it is talking to,
-            and then its configuration and parameters for sending http messages.
+                Receives the context of the webservice the controller is operating in, the context of the Fabric client it is
+                talking to,
+                and then its configuration and parameters for sending http messages.
             </summary>
             <param name="serviceContext"></param>
             <param name="httpClient"></param>
@@ -42,14 +43,16 @@
         </member>
         <member name="T:WebService.Controllers.RoomController">
             <summary>
-            This controller is responsible for routing requests sent from clients to the correct stateful service replica, and then
-            deserialize and package the response data.
+                This controller is responsible for routing requests sent from clients to the correct stateful service replica, and
+                then
+                deserialize and package the response data.
             </summary>
         </member>
         <member name="M:WebService.Controllers.RoomController.#ctor(System.Fabric.StatelessServiceContext,System.Net.Http.HttpClient,System.Fabric.FabricClient,WebService.ConfigSettings)">
             <summary>
-            Receives the context of the webservice the controller is operating in, the context of the Fabric client it is talking to,
-            and then its configuration and parameters for sending http messages.
+                Receives the context of the webservice the controller is operating in, the context of the Fabric client it is
+                talking to,
+                and then its configuration and parameters for sending http messages.
             </summary>
             <param name="serviceContext"></param>
             <param name="httpClient"></param>
@@ -59,6 +62,11 @@
         <member name="M:WebService.Program.Main">
             <summary>
             This is the entry point of the service host process.
+            </summary>
+        </member>
+        <member name="F:WebService.Startup.PlayerStats">
+            <summary>
+            These are local memory data used by controller to cut back on expensive network gathering calls.
             </summary>
         </member>
         <member name="T:WebService.WebService">

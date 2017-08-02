@@ -1,18 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using System.Fabric;
-using System.Net.Http;
-using Newtonsoft.Json;
-using Common;
-using System.Fabric.Query;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+﻿// ------------------------------------------------------------
+//  Copyright (c) Microsoft Corporation.  All rights reserved.
+//  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
+// ------------------------------------------------------------
 
 namespace WebService.Controllers
 {
+    using System;
+    using System.Fabric;
+    using System.Fabric.Query;
+    using System.Net;
+    using System.Net.Http;
+    using System.Threading.Tasks;
+    using Common;
+    using Microsoft.AspNetCore.Mvc;
+    using Newtonsoft.Json;
+
     public class PlayerController : Controller
     {
         private readonly HttpClient httpClient;
@@ -20,12 +22,12 @@ namespace WebService.Controllers
         private readonly ConfigSettings configSettings;
         private readonly FabricClient fabricClient;
 
-        private readonly string uri;
         private readonly string proxy;
 
         /// <summary>
-        /// Receives the context of the webservice the controller is operating in, the context of the Fabric client it is talking to,
-        /// and then its configuration and parameters for sending http messages.
+        ///     Receives the context of the webservice the controller is operating in, the context of the Fabric client it is
+        ///     talking to,
+        ///     and then its configuration and parameters for sending http messages.
         /// </summary>
         /// <param name="serviceContext"></param>
         /// <param name="httpClient"></param>
@@ -38,55 +40,66 @@ namespace WebService.Controllers
             this.configSettings = settings;
             this.fabricClient = fabricClient;
 
-            this.uri = $"{ this.configSettings.ReverseProxyPort}/" +
-                $"{this.serviceContext.CodePackageActivationContext.ApplicationName.Replace("fabric:/", "")}";
-            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:{this.uri}/" +
-                $"{this.configSettings.PlayerManagerName}/api/PlayerStore/";
-
+            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:" +
+                         $"{this.configSettings.ReverseProxyPort}/" +
+                         $"{this.serviceContext.CodePackageActivationContext.ApplicationName.Replace("fabric:/", "")}/" +
+                         $"{this.configSettings.PlayerManagerName}/api/PlayerStore/";
         }
 
         [Route("api/[controller]/NewGame")]
         [HttpGet]
         public async Task<IActionResult> NewGame(string playerid, string roomid, string roomtype)
         {
-
             int key = Partitioners.GetPlayerPartition(playerid);
             string url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}&roomtype={roomtype}&PartitionKind=Int64Range&PartitionKey={key}";
 
             HttpResponseMessage response = await this.httpClient.GetAsync(url);
-            return this.StatusCode((int)response.StatusCode, this.Json(await response.Content.ReadAsStringAsync()));
+            return this.StatusCode((int) response.StatusCode, this.Json(await response.Content.ReadAsStringAsync()));
         }
 
         [Route("api/[controller]/GetStats")]
         [HttpGet]
         public async Task<IActionResult> GetStats()
         {
-
-            ServicePartitionList partitions = await this.fabricClient.QueryManager.GetPartitionListAsync(
-                    new Uri($"{this.serviceContext.CodePackageActivationContext.ApplicationName}/{this.configSettings.PlayerManagerName}"));
-            PlayerStats result = new PlayerStats(0, 0, 0, 0);
-            
-            foreach (Partition partition in partitions)
+            //Only update your data every 20 seconds
+            if (Startup.PlayerStatsLastUpdated == DateTime.MinValue || DateTime.UtcNow.Subtract(Startup.PlayerStatsLastUpdated) > new TimeSpan(0, 0, 20))
             {
-                long key = ((Int64RangePartitionInformation)partition.PartitionInformation).LowKey;
-                string url = this.proxy + $"GetPlayerStats/?PartitionKind={partition.PartitionInformation.Kind}&PartitionKey={key}";
-                HttpResponseMessage response = await this.httpClient.GetAsync(url);
+                ServicePartitionList partitions = await this.fabricClient.QueryManager.GetPartitionListAsync(
+                    new Uri($"{this.serviceContext.CodePackageActivationContext.ApplicationName}/{this.configSettings.PlayerManagerName}"));
+                PlayerStats result = new PlayerStats(0, 0, 0, 0);
 
-                if (response.StatusCode != System.Net.HttpStatusCode.OK)
+                foreach (Partition partition in partitions)
                 {
-                    return this.StatusCode((int)response.StatusCode, this.Json(await response.Content.ReadAsStringAsync()));
-                }
+                    long key = ((Int64RangePartitionInformation) partition.PartitionInformation).LowKey;
+                    string url = this.proxy + $"GetPlayerStats/?PartitionKind={partition.PartitionInformation.Kind}&PartitionKey={key}";
+                    HttpResponseMessage response = await this.httpClient.GetAsync(url);
 
-                PlayerStats thisStat = JsonConvert.DeserializeObject<PlayerStats>(await response.Content.ReadAsStringAsync());
+                    if (response.StatusCode != HttpStatusCode.OK)
+                        return this.StatusCode((int) response.StatusCode, this.Json(await response.Content.ReadAsStringAsync()));
 
-                long newTotal = result.numAccounts + thisStat.numAccounts;
-                result.avgAccountAge = result.avgAccountAge * (result.numAccounts / (float)newTotal) + thisStat.avgAccountAge * (thisStat.numAccounts / (float)newTotal);
-                result.avgNumLogins = result.avgNumLogins * (result.numAccounts / (float)newTotal) + thisStat.avgNumLogins * (thisStat.numAccounts / (float)newTotal);
-                result.numLoggedIn += thisStat.numLoggedIn;
-                result.numAccounts = newTotal;
+                    PlayerStats thisStat = JsonConvert.DeserializeObject<PlayerStats>(await response.Content.ReadAsStringAsync());
+
+                    long newTotal = result.NumAccounts + thisStat.NumAccounts;
+                    result.AvgAccountAge = result.AvgAccountAge * (result.NumAccounts / (float) newTotal) +
+                                           thisStat.AvgAccountAge * (thisStat.NumAccounts / (float) newTotal);
+                    result.AvgNumLogins = result.AvgNumLogins * (result.NumAccounts / (float) newTotal) +
+                                          thisStat.AvgNumLogins * (thisStat.NumAccounts / (float) newTotal);
+                    result.NumLoggedIn += thisStat.NumLoggedIn;
+                    result.NumAccounts = newTotal;
+
+                    if (double.IsNaN(result.AvgAccountAge))
+                        result.AvgAccountAge = 0;
+                    if (float.IsNaN(result.AvgNumLogins))
+                        result.AvgNumLogins = 0;
+                }   
+                Startup.PlayerStats = result;
+                Startup.PlayerStatsLastUpdated = DateTime.UtcNow;
+                return this.StatusCode(200, JsonConvert.SerializeObject(result));
             }
-
-            return this.StatusCode(200, JsonConvert.SerializeObject(result));
+            else
+            {
+                return this.StatusCode(200, JsonConvert.SerializeObject(Startup.PlayerStats));
+            }
         }
     }
 }

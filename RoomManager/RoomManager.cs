@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Fabric;
 using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Services.Communication.AspNetCore;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
-using Microsoft.ServiceFabric.Data;
 using System.Net.Http;
 
 namespace RoomManager
@@ -24,19 +19,6 @@ namespace RoomManager
             : base(context)
         { }
 
-
-        protected override async Task RunAsync(CancellationToken cancellationToken)
-        {
-            ServiceEventSource.Current.Message("Run async called");
-            while (true)
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    ServiceEventSource.Current.Message("Run async cancelled");
-                    break;
-                }
-            }
-        }
 
         /// <summary>
         /// Optional override to create listeners (like tcp, http) for this service instance.
@@ -55,11 +37,11 @@ namespace RoomManager
                                     .UseKestrel()
                                     .ConfigureServices(
                                         services => services
-                                            .AddSingleton<ConfigSettings>(new ConfigSettings(serviceContext))
-                                            .AddSingleton<HttpClient>(new HttpClient())
-                                            .AddSingleton<FabricClient>(new FabricClient())
-                                            .AddSingleton<StatefulServiceContext>(serviceContext)
-                                            .AddSingleton<IReliableStateManager>(this.StateManager))
+                                            .AddSingleton(new ConfigSettings(serviceContext))
+                                            .AddSingleton(new HttpClient())
+                                            .AddSingleton(new FabricClient())
+                                            .AddSingleton(serviceContext)
+                                            .AddSingleton(this.StateManager))
                                     .UseContentRoot(Directory.GetCurrentDirectory())
                                     .UseStartup<Startup>()
                                     .UseApplicationInsights()

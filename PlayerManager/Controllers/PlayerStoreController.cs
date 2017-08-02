@@ -1,59 +1,69 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using System.Fabric;
-using System.Net.Http;
-using Newtonsoft.Json;
-using Microsoft.ServiceFabric.Data;
-using Common;
-using Microsoft.ServiceFabric.Data.Collections;
+﻿// ------------------------------------------------------------
+//  Copyright (c) Microsoft Corporation.  All rights reserved.
+//  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
+// ------------------------------------------------------------
 
 namespace PlayerManager.Controllers
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Fabric;
+    using System.Net.Http;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Common;
+    using Microsoft.AspNetCore.Mvc;
+    using Microsoft.ServiceFabric.Data;
+    using Microsoft.ServiceFabric.Data.Collections;
+    using Newtonsoft.Json;
+
     /// <summary>
-    /// The role of this controller is to manage the state of players that are offline. The dictionary in this service will on average
-    /// hold much more data than a room dictionary, but handle a lot less throughput (Cold Storage). It handles starting and ending games
-    /// by transfering data to and from cold storage, and maintaining longer term account information like account age, settings, and
-    /// how often an account is used.
+    ///     The role of this controller is to manage the state of players that are offline. The dictionary in this service will
+    ///     on average hold much more data than a room dictionary, but handle a lot less throughput (Cold Storage). It handles starting
+    ///     and ending games by transfering data to and from cold storage, and maintaining longer term account information like account age,
+    ///     settings, and how often an account is used.
     /// </summary>
     public class PlayerStoreController : Controller
     {
-        private readonly HttpClient httpClient;
-        private readonly StatefulServiceContext serviceContext;
-        private readonly ConfigSettings configSettings;
-        private readonly FabricClient fabricClient;
-
         private static readonly Uri PlayersDictionaryName = new Uri("store:/players");
+        private readonly HttpClient httpClient;
+        private readonly FabricClient fabricClient;
         private readonly IReliableStateManager stateManager;
 
-        private readonly string uri;
         private readonly string proxy;
 
         /// <summary>
-        /// This constructor will execute on 
+        ///     This constructor will execute the first time a function in the controller is called.
         /// </summary>
         /// <param name="serviceContext"></param>
         /// <param name="httpClient"></param>
         /// <param name="fabricClient"></param>
-        /// <param name="settings"></param>
+        /// <param name="configSettings"></param>
         /// <param name="stateManager"></param>
-        public PlayerStoreController(StatefulServiceContext serviceContext, HttpClient httpClient, FabricClient fabricClient, ConfigSettings settings, IReliableStateManager stateManager)
+        public PlayerStoreController(
+            StatefulServiceContext serviceContext, HttpClient httpClient, FabricClient fabricClient, ConfigSettings configSettings,
+            IReliableStateManager stateManager)
         {
             this.stateManager = stateManager;
-            this.serviceContext = serviceContext;
             this.httpClient = httpClient;
-            this.configSettings = settings;
             this.fabricClient = fabricClient;
 
-            this.uri = $"{ this.configSettings.ReverseProxyPort}/" +
-                $"{this.serviceContext.CodePackageActivationContext.ApplicationName.Replace("fabric:/", "")}";
-            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:{this.uri}/" +
-                $"{this.configSettings.RoomManagerName}/api/RoomStore/";
+            // Proxy to coordinate with the RoomManager
+            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:" +
+                         $"{configSettings.ReverseProxyPort}/" +
+                         $"{serviceContext.CodePackageActivationContext.ApplicationName.Replace("fabric:/", "")}/" +
+                         $"{configSettings.RoomManagerName}/api/RoomStore/";
         }
 
-
+        /// <summary>
+        /// Coordinates the new game process. This entails either gathering the player data or creating a new player, and handing that
+        /// data off to an active room. It coordinates the current state of the player by using the LogState of the player here and the
+        /// existence of the player in the room.
+        /// </summary>
+        /// <param name="playerid"></param>
+        /// <param name="roomid"></param>
+        /// <param name="roomtype"></param>
+        /// <returns></returns>
         [Route("api/[controller]/NewGame")]
         [HttpGet]
         public async Task<IActionResult> NewGame(string playerid, string roomid, string roomtype)
@@ -79,120 +89,96 @@ namespace PlayerManager.Controllers
                         //Scenario: Player says logged in, but is not logged in to room (LI-N)
                         int key = Partitioners.GetRoomPartition(roomid);
                         string url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}" +
-                            $"&playerdata={JsonConvert.SerializeObject(p)}" +
-                            $"&roomtype={roomtype}" + 
-                            $"&PartitionKind=Int64Range&PartitionKey={key}";
+                                     $"&playerdata={JsonConvert.SerializeObject(p)}" +
+                                     $"&roomtype={roomtype}" +
+                                     $"&PartitionKind=Int64Range&PartitionKey={key}";
                         HttpResponseMessage response = await this.httpClient.GetAsync(url);
-                        string response_message = await response.Content.ReadAsStringAsync();
-                        if ((int)response.StatusCode == 200)
-                        {
-                            return new ContentResult { StatusCode = 200, Content = roomtype };
-                        }
-                        else
-                        {
-                            return new ContentResult { StatusCode = 500, Content = $"Something went wrong, please retry" };
-                        }
-
+                        string responseMessage = await response.Content.ReadAsStringAsync();
+                        return (int) response.StatusCode == 200 ? new ContentResult {StatusCode = 200, Content = roomtype} : 
+                            new ContentResult {StatusCode = 500, Content = responseMessage};
                     }
-                    else if (playerOption.Value.state == LogState.LoggedOut)
+                    switch (playerOption.Value.State)
                     {
-                        // Scenario: We think player is logged out (LO-N), 
-                        // could also be (LO-LI). If this is the case, there are two options. The first is that the room we are about to log
-                        // into has data, in which case we will override that data. The second case is that a different room has the player
-                        // logged in. In this case we trust that the protocol has removed that clients access to the player, so that player
-                        // will be cleaned up by the timeout.
-
-                        PlayerPackage pp = playerOption.Value;
-                        pp.state = LogState.LoggedIn;
-                        pp.roomid = roomid;
-                        pp.numLogins++;
-                        await playdict.SetAsync(tx, playerid, pp);
-                        await tx.CommitAsync();
-
-                        // Scenario: We are in (LI-N) or (LI-LI)
-                        int key = Partitioners.GetRoomPartition(roomid);
-                        string url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}" +
-                            $"&playerdata={JsonConvert.SerializeObject(playerOption.Value.player)}" +
-                            $"&roomtype={roomtype}" +
-                            $"&PartitionKind=Int64Range&PartitionKey={key}";
-                        HttpResponseMessage response = await this.httpClient.GetAsync(url);
-                        string response_message = await response.Content.ReadAsStringAsync();
-                        if ((int)response.StatusCode == 200)
+                        case LogState.LoggedOut:
                         {
-                            return new ContentResult { StatusCode = 200, Content = roomtype };
+                            // Scenario: We think player is logged out (LO-N), 
+                            // could also be (LO-LI). If this is the case, there are two options. The first is that the room we are about to log
+                            // into has data, in which case we will override that data. The second case is that a different room has the player
+                            // logged in. In this case we trust that the protocol has removed that clients access to the player, so that player
+                            // will be cleaned up by the timeout.
+
+                            PlayerPackage pp = playerOption.Value;
+                            pp.State = LogState.LoggedIn;
+                            pp.RoomId = roomid;
+                            pp.NumLogins++;
+                            await playdict.SetAsync(tx, playerid, pp);
+                            await tx.CommitAsync();
+
+                            // Scenario: We are in (LI-N) or (LI-LI)
+                            int key = Partitioners.GetRoomPartition(roomid);
+                            string url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}" +
+                                         $"&playerdata={JsonConvert.SerializeObject(playerOption.Value.Player)}" +
+                                         $"&roomtype={roomtype}" +
+                                         $"&PartitionKind=Int64Range&PartitionKey={key}";
+                            HttpResponseMessage response = await this.httpClient.GetAsync(url);
+                            string responseMessage = await response.Content.ReadAsStringAsync();
+                            if ((int) response.StatusCode == 200)
+                                return new ContentResult {StatusCode = 200, Content = roomtype};
+                            return new ContentResult {StatusCode = 500, Content = responseMessage};
                         }
-                        else
+                        case LogState.LoggedIn:
                         {
-                            return new ContentResult { StatusCode = 500, Content = $"Something went wrong, please retry" };
-                        }
-                    }
-                    else if (playerOption.Value.state == LogState.LoggedIn)
-                    {
-                        // Scenario: Assuming the last login was successful, we think the state will be (LI-LI). However in case of failure,
-                        // we could be in (LI-N)
+                            // Scenario: Assuming the last login was successful, we think the state will be (LI-LI). However in case of failure,
+                            // we could be in (LI-N)
 
-                        // So first we ask if the room has the data, if it does, the player is logged in
-                        await tx.CommitAsync();
-                        int key = Partitioners.GetRoomPartition(roomid);
-                        string url = this.proxy + $"Exists/?playerid={playerid}&roomid={roomid}&PartitionKind=Int64Range&PartitionKey={key}";
-                        HttpResponseMessage response = await this.httpClient.GetAsync(url);
-                        string response_message = await response.Content.ReadAsStringAsync();
-                        if ((int)response.StatusCode == 200)
-                        {
-                            if (response_message == "true")
+                            // So first we ask if the room has the data, if it does, the player is logged in
+                            await tx.CommitAsync();
+                            int key = Partitioners.GetRoomPartition(roomid);
+                            string url = this.proxy + $"Exists/?playerid={playerid}&roomid={roomid}&PartitionKind=Int64Range&PartitionKey={key}";
+                            HttpResponseMessage response = await this.httpClient.GetAsync(url);
+                            string responseMessage = await response.Content.ReadAsStringAsync();
+                            if ((int) response.StatusCode == 200)
                             {
-                                //Scenario: We are in (LI-LI), so deny the request
-                                return new ContentResult { StatusCode = 400, Content = $"This player is already logged in" };
+                                if (responseMessage == "true")
+                                    return new ContentResult {StatusCode = 400, Content = "This player is already logged in"};
+                                if (responseMessage == "false")
+                                    using (ITransaction tx1 = this.stateManager.CreateTransaction())
+                                    {
+                                        PlayerPackage pp = playerOption.Value;
+                                        pp.RoomId = roomid;
+                                        pp.NumLogins++;
+                                        await playdict.SetAsync(tx, playerid, pp);
+                                        await tx1.CommitAsync();
+
+                                        key = Partitioners.GetRoomPartition(roomid);
+                                        url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}" +
+                                              $"&playerdata={JsonConvert.SerializeObject(pp.Player)}" +
+                                              $"&roomtype={roomtype}" +
+                                              $"&PartitionKind=Int64Range&PartitionKey={key}";
+                                        response = await this.httpClient.GetAsync(url);
+                                        responseMessage = await response.Content.ReadAsStringAsync();
+                                        return (int) response.StatusCode == 200 ? new ContentResult {StatusCode = 200, Content = roomtype} : 
+                                            new ContentResult {StatusCode = 500, Content = responseMessage};
+                                    }
                             }
-                            else if (response_message == "false")
+                            else
                             {
-                                // Scenario: We are LI but that state is N, so we can login to whichever room we want to
-
-                                using (ITransaction tx1 = this.stateManager.CreateTransaction())
-                                {
-
-                                    PlayerPackage pp = playerOption.Value;
-                                    pp.roomid = roomid;
-                                    pp.numLogins++;
-                                    await playdict.SetAsync(tx, playerid, pp);
-                                    await tx1.CommitAsync();
-
-                                    key = Partitioners.GetRoomPartition(roomid);
-                                    url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}" +
-                                        $"&playerdata={JsonConvert.SerializeObject(pp.player)}" +
-                                        $"&roomtype={roomtype}" +
-                                        $"&PartitionKind=Int64Range&PartitionKey={key}";
-                                    response = await this.httpClient.GetAsync(url);
-                                    response_message = await response.Content.ReadAsStringAsync();
-                                    if ((int)response.StatusCode == 200)
-                                    {
-                                        return new ContentResult { StatusCode = 200, Content = roomtype };
-                                    }
-                                    else
-                                    {
-                                        return new ContentResult { StatusCode = 500, Content = $"Something went wrong, please retry" };
-                                    }
-                                }
+                                return new ContentResult {StatusCode = 500, Content = "Something went wrong, please retry"};
                             }
-
                         }
-                        else
-                        {
-                            return new ContentResult { StatusCode = 500, Content = $"Something went wrong, please retry" };
-                        }
-
+                            break;
                     }
                     await tx.CommitAsync();
-                return new ContentResult { StatusCode = 500, Content = $"Something went wrong, please retry" };
-                }   
+                    return new ContentResult {StatusCode = 500, Content = "Something went wrong, please retry"};
+                }
             }
             catch (FabricNotPrimaryException)
             {
-                return new ContentResult { StatusCode = 410, Content = "The primary replica has moved. Please re-resolve the service." };
+                return new ContentResult {StatusCode = 410, Content = "The primary replica has moved. Please re-resolve the service."};
             }
             catch (FabricException)
             {
-                return new ContentResult { StatusCode = 503, Content = "The service was unable to process the request. Please try again." };
+                return new ContentResult {StatusCode = 503, Content = "The service was unable to process the request. Please try again."};
             }
         }
 
@@ -204,7 +190,7 @@ namespace PlayerManager.Controllers
             {
                 Player player = JsonConvert.DeserializeObject<Player>(playerdata);
                 IReliableDictionary<string, PlayerPackage> playdict =
-                        await this.stateManager.GetOrAddAsync<IReliableDictionary<string, PlayerPackage>>(PlayersDictionaryName);
+                    await this.stateManager.GetOrAddAsync<IReliableDictionary<string, PlayerPackage>>(PlayersDictionaryName);
 
                 using (ITransaction tx = this.stateManager.CreateTransaction())
                 {
@@ -213,31 +199,31 @@ namespace PlayerManager.Controllers
                     if (!playerOption.HasValue)
                     {
                         await tx.CommitAsync();
-                        return new ContentResult { StatusCode = 500 };
+                        return new ContentResult {StatusCode = 500};
                     }
 
-                    if (playerOption.Value.state == LogState.LoggedOut)
+                    if (playerOption.Value.State == LogState.LoggedOut)
                     {
                         await tx.CommitAsync();
-                        return new ContentResult { StatusCode = 200 };
+                        return new ContentResult {StatusCode = 200};
                     }
-                    else if (playerOption.Value.state == LogState.LoggedIn)
+                    if (playerOption.Value.State == LogState.LoggedIn)
                     {
                         PlayerPackage pp = playerOption.Value;
-                        pp.player = player;
-                        pp.state = LogState.LoggedOut;
+                        pp.Player = player;
+                        pp.State = LogState.LoggedOut;
                         await playdict.SetAsync(tx, playerid, pp);
                         await tx.CommitAsync();
-                        return new ContentResult { StatusCode = 200 };
+                        return new ContentResult {StatusCode = 200};
                     }
 
                     await tx.CommitAsync();
-                    return new ContentResult { StatusCode = 500 };
+                    return new ContentResult {StatusCode = 500};
                 }
             }
             catch
             {
-                return new ContentResult { StatusCode = 500 };
+                return new ContentResult {StatusCode = 500};
             }
         }
 
@@ -251,23 +237,22 @@ namespace PlayerManager.Controllers
                 IReliableDictionary<string, PlayerPackage> playdict =
                     await this.stateManager.GetOrAddAsync<IReliableDictionary<string, PlayerPackage>>(PlayersDictionaryName);
 
-                PlayerStats stats = new PlayerStats(0,0,0,0);
+                PlayerStats stats = new PlayerStats(0, 0, 0, 0);
 
                 using (ITransaction tx = this.stateManager.CreateTransaction())
                 {
-                    stats.numAccounts = await playdict.GetCountAsync(tx);
+                    stats.NumAccounts = await playdict.GetCountAsync(tx);
 
                     IAsyncEnumerable<KeyValuePair<string, PlayerPackage>> enumerable = await playdict.CreateEnumerableAsync(tx);
-                    IAsyncEnumerator<KeyValuePair<string,PlayerPackage>> enumerator = enumerable.GetAsyncEnumerator();
-                    while (await enumerator.MoveNextAsync(System.Threading.CancellationToken.None))
+                    IAsyncEnumerator<KeyValuePair<string, PlayerPackage>> enumerator = enumerable.GetAsyncEnumerator();
+                    while (await enumerator.MoveNextAsync(CancellationToken.None))
                     {
-                        if(enumerator.Current.Value.state == LogState.LoggedIn)
-                        {
-                            stats.numLoggedIn++;
-                        }
+                        if (enumerator.Current.Value.State == LogState.LoggedIn)
+                            stats.NumLoggedIn++;
 
-                        stats.avgNumLogins += (float)enumerator.Current.Value.numLogins / stats.numAccounts;
-                        stats.avgAccountAge += (double)(DateTime.Now.ToUniversalTime().Subtract(enumerator.Current.Value.firstLogin)).Seconds / stats.numAccounts;
+                        stats.AvgNumLogins += (float) enumerator.Current.Value.NumLogins / stats.NumAccounts;
+                        stats.AvgAccountAge += (double) DateTime.Now.ToUniversalTime().Subtract(enumerator.Current.Value.FirstLogin).Seconds /
+                                               stats.NumAccounts;
                     }
                     await tx.CommitAsync();
 

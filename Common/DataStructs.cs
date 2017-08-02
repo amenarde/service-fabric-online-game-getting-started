@@ -1,87 +1,93 @@
-﻿using System;
+﻿// ------------------------------------------------------------
+//  Copyright (c) Microsoft Corporation.  All rights reserved.
+//  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
+// ------------------------------------------------------------
 
 namespace Common
 {
+    using System;
 
-    public enum LogState { LoggedIn, LoggedOut}
+    public enum LogState
+    {
+        LoggedIn,
+        LoggedOut
+    }
 
     public struct PlayerStats
     {
-        public long numAccounts;
-        public long numLoggedIn;
-        public float avgNumLogins;
-        public double avgAccountAge; //seconds
+        public long NumAccounts;
+        public long NumLoggedIn;
+        public float AvgNumLogins;
+        public double AvgAccountAge; //seconds
 
         public PlayerStats(long numAccounts, long numLoggedIn, float avgNumLogins, double avgAccountAge)
         {
-            this.numAccounts = numAccounts;
-            this.numLoggedIn = numLoggedIn;
-            this.avgNumLogins = avgNumLogins;
-            this.avgAccountAge = avgAccountAge;
+            this.NumAccounts = numAccounts;
+            this.NumLoggedIn = numLoggedIn;
+            this.AvgNumLogins = avgNumLogins;
+            this.AvgAccountAge = avgAccountAge;
         }
     }
 
 
     public struct PlayerPackage
     {
-        public Player player;
-        public LogState state;
-        public int numLogins;
-        public DateTime firstLogin; //UTC
-        public string roomid;
+        public Player Player;
+        public LogState State;
+        public int NumLogins;
+        public DateTime FirstLogin; //UTC
+        public string RoomId;
 
         public PlayerPackage(Player player, LogState state, int numLogins, DateTime firstLogin, string roomid)
         {
-            this.player = player;
-            this.state = state;
-            this.numLogins = numLogins;
-            this.firstLogin = firstLogin;
-            this.roomid = roomid;
+            this.Player = player;
+            this.State = state;
+            this.NumLogins = numLogins;
+            this.FirstLogin = firstLogin;
+            this.RoomId = roomid;
         }
     }
 
     public struct ActivePlayer
     {
-        public Player player;
-        public DateTime lastUpdated; //UTC
+        public Player Player;
+        public DateTime LastUpdated; //UTC
 
         public ActivePlayer(Player player, DateTime lastUpdated)
         {
-            this.player = player;
-            this.lastUpdated = lastUpdated;
+            this.Player = player;
+            this.LastUpdated = lastUpdated;
         }
     }
 
 
     public struct Player
     {
-        public int xpos;
-        public int ypos;
-        public string color;
+        public int XPos;
+        public int YPos;
+        public string Color;
 
         public Player(int xpos, int ypos, string color)
         {
-            this.xpos = xpos;
-            this.ypos = ypos;
-            this.color = color;
-
+            this.XPos = xpos;
+            this.YPos = ypos;
+            this.Color = color;
         }
     }
 
     /// <summary>
-    /// This is the struct that contains relevant room data: the number of players and the room type
+    ///     This is the struct that contains relevant room data: the number of players and the room type
     /// </summary>
     public struct Room
     {
-
-        public int numplayers;
-        public string roomtype;
+        public int NumPlayers;
+        public string RoomType;
 
 
         public Room(int numplayers, string roomtype)
         {
-            this.roomtype = roomtype;
-            this.numplayers = numplayers;
+            this.RoomType = roomtype;
+            this.NumPlayers = numplayers;
         }
     }
 }
