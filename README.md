@@ -7,7 +7,7 @@ author: t-anmena
 # Service Fabric Online Game Application [WorkBud]
 This reference application demonstrates how to begin building an end-to-end online multiplayer game on Service Fabric by taking advantage of Reliable Services. This application will help demonstrate how to build any type of online application, but also implements some solutions that meet the requirements of modern real-time MMOs.
 
-If you have no previous knowledge of building with Service Fabric, .NET, or game design, this is still the sample application for you. There is other useful information about this application linked at the bottom of the page, and the application comes with a [Reading List][3] to help you get started on concepts. 
+If you have no previous knowledge of building with Service Fabric, .NET, or game design, this is still the sample application for you. There is other useful information about this application linked at the bottom of the page, and the application comes with a [Reading List][3] to help you get started on concepts. As you learn the application more thoroughly, if you want to understand the implementation of a new feature, there is a document on it [here][5].
 
 ## Scenario
 The context of this sample is an online presence-based game in which users can login and join rooms. In these rooms users can see every other player in the room, move around the room, and change features about themselves. Accounts and player information are persisted, and players can join any room they would like at each new login. This sample application was designed to have a very simple architecture yet be able to scale massively. It is built on three services:
@@ -16,7 +16,7 @@ The context of this sample is an online presence-based game in which users can l
 - Offline Player Service (Cold Storage)
 - Online Rooms Service (Hot Storage)
 
-The web service routes requests from clients to the appropriate services and performs some data validation. The offline player service holds long term player data like metrics and player settings and holds game data when a player is offline. Upon login, that game data is moved to the online rooms service, which stores that player data in a room with other players, so that data can be quickly gathered and updated. Upon logout, that data is moved back to cold storage.
+The web service routes requests from clients to the appropriate services and performs some data validation. The offline player service holds long term player data like metrics and player settings and holds game data when a player is offline. Upon login, that game data is moved to the online rooms service, which stores that player data in a room with other players, so that data can be quickly gathered and updated. Upon logout, that data is moved back to cold storage. To understand more about architecture, there is a document on it [here][4].
 
 Using Service Fabric's stateful services, each of these services can maintain its own data, rather than relying a shared monolithic data base. This allows each service to scale independently using Service Fabric's stateful partitioning. In terms of gameplay, this also decreases the distance of the data to the client, which means faster response times, important for online games.
 
@@ -49,9 +49,12 @@ Enter the client endpoint that you just provided to your `Cloud.xml`.
 
 ## Next Steps
 This application was designed to be readable to someone without prior knowledge of Service Fabric. All important functions are documented XML-style in /docs, and there are also some general documents to support the readings:
+- [Learn important Service Fabric concepts to support your readthrough of the code][3]
 - [Learn about the application architecture and data flow.][4]
 - [Walk through the implementation of a new feature in the game.][5]
-- [Learn important Service Fabric concepts to support your readthrough of the code][3]
+
+## MSFT OSS Code Of Conduct Notice
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
 
 [1]: https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-get-started
 [2]: https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-cluster-creation-via-portal#create-cluster-in-the-azure-portal
