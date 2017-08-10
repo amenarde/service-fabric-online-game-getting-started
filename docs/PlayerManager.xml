@@ -29,13 +29,11 @@
             <summary>
                 The role of this controller is to manage the state of players that are offline. The dictionary in this service will
                 on average hold much more data than a room dictionary, but handle a lot less throughput (Cold Storage). It handles
-                starting
-                and ending games by transfering data to and from cold storage, and maintaining longer term account information like
-                account age,
-                settings, and how often an account is used.
+                starting and ending games by transfering data to and from cold storage, and maintaining longer term account information like
+                account age, settings, and how often an account is used.
             </summary>
         </member>
-        <member name="M:PlayerManager.Controllers.PlayerStoreController.#ctor(System.Fabric.StatefulServiceContext,System.Net.Http.HttpClient,System.Fabric.FabricClient,PlayerManager.ConfigSettings,Microsoft.ServiceFabric.Data.IReliableStateManager)">
+        <member name="M:PlayerManager.Controllers.PlayerStoreController.#ctor(System.Fabric.StatefulServiceContext,System.Net.Http.HttpClient,System.Fabric.FabricClient,PlayerManager.ConfigSettings,Microsoft.ServiceFabric.Data.IReliableStateManager,PlayerManager.PlayerManager)">
             <summary>
                 This constructor will execute the first time a function in the controller is called.
             </summary>
@@ -44,24 +42,59 @@
             <param name="fabricClient"></param>
             <param name="configSettings"></param>
             <param name="stateManager"></param>
+            <param name="cache"></param>
         </member>
         <member name="M:PlayerManager.Controllers.PlayerStoreController.NewGame(System.String,System.String,System.String)">
             <summary>
                 Coordinates the new game process. This entails either gathering the player data or creating a new player, and
-                handing that
-                data off to an active room. It coordinates the current state of the player by using the LogState of the player here
-                and the
-                existence of the player in the room.
+                handing that data off to an active room. It coordinates the current state of the player by using the LogState 
+                of the player here and the existence of the player in the room.
             </summary>
             <param name="playerid"></param>
             <param name="roomid"></param>
             <param name="roomtype"></param>
-            <returns></returns>
+            <returns>200 if successful, 503 if requesting a retry, 500 if failure, and 400 if the user is already logged in</returns>
+        </member>
+        <member name="M:PlayerManager.Controllers.PlayerStoreController.EndGame(System.String,System.String)">
+            <summary>
+            Called by the EndGame RoomController function to coordinate the end of a game. Responsible for ensuring that the most recent
+            player data is stored in the player dictionary and that the player is known logged out.
+            </summary>
+            <param name="playerid"></param>
+            <param name="playerdata"></param>
+            <returns>200 if successful, 503 if requesting a retry, and 500 if failure</returns>
+        </member>
+        <member name="M:PlayerManager.Controllers.PlayerStoreController.GetPlayerStats">
+            <summary>
+            This function iterates through this partitions player dictionary gathering player statistics and rolling them into averages and
+            totals. It then sends its partial statistics which will be combined with those of other partitions.
+            </summary>
+            <returns>a JSON serialized PlayerStats object if successful, 503 if requesting a retry, and 500 if failure</returns>
         </member>
         <member name="T:PlayerManager.PlayerManager">
             <summary>
             The FabricRuntime creates an instance of this class for each service type instance. 
             </summary>
+        </member>
+        <member name="F:PlayerManager.PlayerManager.IsActive">
+            <summary>
+            The IsActive token is used to ensure our controllers do not serve requests until the application is initialized. Controller
+            functions check this token before they serve requests. When RunAsync is called on the Service is when it is ready to
+            serve requests.
+            </summary>
+        </member>
+        <member name="M:PlayerManager.PlayerManager.#ctor(System.Fabric.StatefulServiceContext)">
+            <summary>
+            This class is the basis of the stateful service. Functions can be defined here and called by other service if using reverse proxy,
+            or controllers can call functions here. In this application we can store cached information that we would like controllers to have
+            access to, since they cannot maintain their own state.
+            </summary>
+        </member>
+        <member name="M:PlayerManager.PlayerManager.RunAsync(System.Threading.CancellationToken)">
+            <summary>
+            Called when the Service is started up. It is here that you would initialize things in your service or begin long-running tasks.
+            </summary>
+            <param name="cancellationToken"></param>
         </member>
         <member name="M:PlayerManager.PlayerManager.CreateServiceReplicaListeners">
             <summary>
@@ -73,6 +106,36 @@
             <summary>
             This is the entry point of the service host process.
             </summary>
+        </member>
+        <member name="T:PlayerManager.Startup">
+            <summary>
+            Class contains configurations to build the environment for this service. It is run on a service's first deployment.
+            </summary>
+        </member>
+        <member name="M:PlayerManager.Startup.#ctor(Microsoft.AspNetCore.Hosting.IHostingEnvironment)">
+            <summary>
+            Creates a configuration file that considers the environment the service is running on.
+            </summary>
+            <param name="env"></param>
+        </member>
+        <member name="P:PlayerManager.Startup.Configuration">
+            <summary>
+            Called upon configuration.
+            </summary>
+        </member>
+        <member name="M:PlayerManager.Startup.ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+            <summary>
+            This method gets called by the runtime. Use this method to add services to the container.
+            </summary>
+            <param name="services"></param>
+        </member>
+        <member name="M:PlayerManager.Startup.Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder,Microsoft.AspNetCore.Hosting.IHostingEnvironment,Microsoft.Extensions.Logging.ILoggerFactory)">
+            <summary>
+            This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+            </summary>
+            <param name="app"></param>
+            <param name="env"></param>
+            <param name="loggerFactory"></param>
         </member>
     </members>
 </doc>

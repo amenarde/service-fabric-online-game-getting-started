@@ -36,21 +36,28 @@ body button:active {
 
 /** Status Bar */
 
-.status_bar {
+#status_bar {
     background-color: whitesmoke;
     bottom: 0;
+    height: 2.2vh;
     color: darkslategray;
-    height: auto;
     left: 0;
     position: fixed;
     width: 100%;
     z-index: 100;
+    vertical-align: bottom;
 }
 
-.status_bar button {
+#status {
+    height: 1.8vh;
+    vertical-align: bottom;
+}
+
+#status_bar button {
     height: auto;
     padding: 0 0;
     width: 100px;
+    vertical-align: middle;
 }
 
 /* Login Screen */
@@ -93,8 +100,7 @@ body button:active {
 /** Game Buttons / Input */
 
 .gameDiv {
-    left: 5vw;
-    margin-right: 5vw;
+    left: 1vw;
     padding: 8px;
     position: absolute;
 }
@@ -102,14 +108,14 @@ body button:active {
 
 .gameDiv input {
     font-size: 1.3vh;
-    width: initial;
-    width: 300px;
+    width: 150px;
 }
 
 .gameDiv button {
-    height: 3vh;
-    text-align: center;
+    height: auto;
     width: auto;
+    text-align: center;
+    vertical-align: middle;
 }
 
 /** Game Canvas */

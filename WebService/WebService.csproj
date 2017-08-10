@@ -16,6 +16,8 @@
     <Content Include="wwwroot\index.html" />
     <Content Include="wwwroot\js\game.js" />
     <Content Include="wwwroot\js\site.js" />
+    <Content Include="wwwroot\js\test.js" />
+    <Content Include="wwwroot\Test.html" />
     <Content Include="wwwroot\_references.js" />
   </ItemGroup>
   <ItemGroup>
@@ -28,7 +30,9 @@
     <PackageReference Include="Microsoft.ServiceFabric.AspNetCore.WebListener" Version="2.6.210" />
     <PackageReference Include="Microsoft.ServiceFabric.Data" Version="2.6.210" />
     <PackageReference Include="Microsoft.ServiceFabric.Services" Version="2.6.210" />
+    <PackageReference Include="Microsoft.VisualStudio.UnitTesting" Version="11.0.50727.1" />
     <PackageReference Include="Microsoft.VisualStudio.Web.BrowserLink" Version="1.1.2" />
+    <PackageReference Include="TestToolsToXunitProxy" Version="0.0.4" />
   </ItemGroup>
   <ItemGroup>
     <DotNetCliToolReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Tools" Version="1.0.1" />

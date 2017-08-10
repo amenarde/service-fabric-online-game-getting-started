@@ -30,34 +30,80 @@
             Called to dynamically get the correct port that related services will have open.
             </summary>
         </member>
+        <member name="T:WebService.Controllers.PlayerController">
+            <summary>
+            This stateless service has two roles. The primary role is to route calls to the correct partitions in the stateful service, and also
+            to generate information that requires knowledge of all the stateful partitions. This is also the place to do verification that you
+            would not want to do client side to prevent malicious actions or catch things that accidentally got through.
+            </summary>
+        </member>
         <member name="M:WebService.Controllers.PlayerController.#ctor(System.Fabric.StatelessServiceContext,System.Net.Http.HttpClient,System.Fabric.FabricClient,WebService.ConfigSettings)">
             <summary>
-                Receives the context of the webservice the controller is operating in, the context of the Fabric client it is
-                talking to,
-                and then its configuration and parameters for sending http messages.
+            Allows this controller, which is recreated and destroyed for each call, 
+            to access the contexts it needs to control the behavior wanted.
             </summary>
-            <param name="serviceContext"></param>
-            <param name="httpClient"></param>
-            <param name="fabricClient"></param>
-            <param name="settings"></param>
+        </member>
+        <member name="M:WebService.Controllers.PlayerController.NewGameAsync(System.String,System.String,System.String)">
+            <summary>
+            Handles the login process by verifying arguments.
+            </summary>
+            <param name="playerid">The username of the player trying to log in</param>
+            <param name="roomid">The room the player is trying to join</param>
+            <param name="roomtype">Holds the room type, which is only used if making a new room, making it optional for existing rooms</param>
+            <returns></returns>
+        </member>
+        <member name="M:WebService.Controllers.PlayerController.GetStatsAsync">
+            <summary>
+            Handles gathering account statistics from the backend. This demonstrates the special purpose in having a dedicated
+            RoomManager. Gathers and concatenates these statistics from all the partitions. Do this infrequently.
+            </summary>
+            <returns>PlayerStats object and success code or a failure code</returns>
         </member>
         <member name="T:WebService.Controllers.RoomController">
             <summary>
-                This controller is responsible for routing requests sent from clients to the correct stateful service replica, and
-                then
-                deserialize and package the response data.
+            This stateless service has two roles. The primary role is to route calls to the correct partitions in the stateful service, and also
+            to generate information that requires knowledge of all the stateful partitions. This is also the place to do verification that you
+            would not want to do client side to prevent malicious actions or catch things that accidentally got through.
             </summary>
         </member>
         <member name="M:WebService.Controllers.RoomController.#ctor(System.Fabric.StatelessServiceContext,System.Net.Http.HttpClient,System.Fabric.FabricClient,WebService.ConfigSettings)">
             <summary>
-                Receives the context of the webservice the controller is operating in, the context of the Fabric client it is
-                talking to,
-                and then its configuration and parameters for sending http messages.
+            Allows this controller, which is recreated and destroyed for each call, 
+            to access the contexts it needs to control the behavior wanted.
             </summary>
-            <param name="serviceContext"></param>
-            <param name="httpClient"></param>
-            <param name="fabricClient"></param>
-            <param name="settings"></param>
+        </member>
+        <member name="M:WebService.Controllers.RoomController.GetRoomsAsync">
+            <summary>
+            Called once a second by clients that are not currently logged in
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:WebService.Controllers.RoomController.GetGameAsync(System.String)">
+            <summary>
+            Handles requests to get a current game state. This will likely be the most common request in this application. Push it
+            through the backend.
+            </summary>
+            <param name="roomid">Current room the player is in</param>
+            <returns></returns>
+        </member>
+        <member name="M:WebService.Controllers.RoomController.UpdateGameAsync(System.String,System.String,System.String)">
+            <summary>
+            Called to update features of the player like position and color. Likely the second most common request in this application.
+            If player information grows, this should be moved to a differencing model rather than a full update every time.
+            </summary>
+            <param name="playerid">The player they want to update</param>
+            <param name="roomid">The room they think they are in. This is provided by the client to make routing more quick.</param>
+            <param name="player">The new package of player data</param>
+            <returns></returns>
+        </member>
+        <member name="M:WebService.Controllers.RoomController.EndGameAsync(System.String,System.String)">
+            <summary>
+            Forwards the request to end the game. Since this function is often called if a user closes the window without logging out,
+            it is likely they will not see the return message.
+            </summary>
+            <param name="playerid">The player you want to logout</param>
+            <param name="roomid">The room they are in. Used to speed up the routing process.</param>
+            <returns></returns>
         </member>
         <member name="M:WebService.Program.Main">
             <summary>

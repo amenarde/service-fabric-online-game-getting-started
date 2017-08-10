@@ -9,10 +9,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DocumentationFile>..\docs\PlayerManager.xml</DocumentationFile>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Folder Include="wwwroot\" />
-  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.1.1" />
     <PackageReference Include="Microsoft.AspNetCore" Version="1.1.2" />
@@ -22,7 +18,9 @@
     <PackageReference Include="Microsoft.ServiceFabric.AspNetCore.Kestrel" Version="2.6.220" />
     <PackageReference Include="Microsoft.ServiceFabric.Data" Version="2.6.220" />
     <PackageReference Include="Microsoft.ServiceFabric.Services" Version="2.6.220" />
+    <PackageReference Include="Microsoft.VisualStudio.UnitTesting" Version="11.0.50727.1" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
+    <PackageReference Include="TestToolsToXunitProxy" Version="0.0.4" />
   </ItemGroup>
   <ItemGroup>
     <DotNetCliToolReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Tools" Version="1.0.1" />

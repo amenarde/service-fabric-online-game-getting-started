@@ -16,11 +16,11 @@ var gameArea = {
         this.canvas.height = side;
         this.canvas.position = "absolute";
         if (w > h) {
-            this.canvas.left = (w - side) / 2;
-            this.canvas.top = 0;
+            this.canvas.style.left = (w - side) / 2;
+            this.canvas.style.top = 0;
         } else {
-            this.canvas.top = (h - side) / 2;
-            this.canvas.left = 0;
+            this.canvas.style.top = (h - side) / 2;
+            this.canvas.style.left = 0;
         }
 
         this.context = this.canvas.getContext("2d");
@@ -30,6 +30,7 @@ var gameArea = {
             function(e) {
                 gameArea.keys = (gameArea.keys || []);
                 gameArea.keys[e.keyCode] = true;
+
             });
         window.addEventListener("keyup",
             function(e) {

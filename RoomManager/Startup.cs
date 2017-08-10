@@ -6,8 +6,15 @@ using Microsoft.Extensions.Logging;
 
 namespace RoomManager
 {
+    /// <summary>
+    /// Class contains configurations to build the environment for this service. It is run on a service's first deployment.
+    /// </summary>
     public class Startup
     {
+        /// <summary>
+        /// Creates a configuration file that considers the environment the service is running on.
+        /// </summary>
+        /// <param name="env"></param>
         public Startup(IHostingEnvironment env)
         {
             IConfigurationBuilder builder = new ConfigurationBuilder()
@@ -18,16 +25,27 @@ namespace RoomManager
             this.Configuration = builder.Build();
         }
 
+        /// <summary>
+        /// Called upon configuration.
+        /// </summary>
         public IConfigurationRoot Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
+        /// <summary>
+        /// This method gets called by the runtime. Use this method to add services to the container.
+        /// </summary>
+        /// <param name="services"></param>hod to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             // Add framework services.
             services.AddMvc();
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        /// <summary>
+        /// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        /// </summary>
+        /// <param name="app"></param>
+        /// <param name="env"></param>
+        /// <param name="loggerFactory"></param>
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
             loggerFactory.AddConsole(this.Configuration.GetSection("Logging"));

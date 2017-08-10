@@ -1,6 +1,5 @@
 ﻿// ------------------------------------------------------------
 //  Copyright (c) Microsoft Corporation.  All rights reserved.
-//  Authored by Antonio Menarde.
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
@@ -12,9 +11,9 @@
  *      whole to update more frequently than a single players game state.
  * SERVER_PUSH_TIME: Does not need to be often because of client refreshing, but too long will lead to bad response for other clients.
  */
-var CLIENT_REFRESH_TIME = 50;
-var SERVER_READ_TIME = 75;
-var SERVER_PUSH_TIME = 100;
+var CLIENT_REFRESH_TIME = 40;
+var SERVER_READ_TIME = 30;
+var SERVER_PUSH_TIME = 10;
 var ROOM_GET_TIME = 1000; //How often we refresh the rooms in login screen
 
 var ROOM_OPTIONS = [
@@ -25,6 +24,7 @@ var ROOM_OPTIONS = [
 
 var drawgamerefresh;
 var showroomrefresh;
+var statusblinktimeout;
 
 
 // These structures are used to manage the relevant game state for the client and effectively communicate with the controller.
@@ -58,14 +58,43 @@ window.onload = function() {
         ROOM_GET_TIME);
 };
 
-/**
-* On window close make an attempt to end the game.
-*/
+
+//To help prevent missing a keyup, causing the player to continuously move
+window.onblur = function () {
+    if (gameArea) {
+        gameArea.keys[37] = false;
+        gameArea.keys[38] = false;
+        gameArea.keys[39] = false;
+        gameArea.keys[40] = false;   
+    }
+};
+
+
+
+// On window close make an attempt to end the game.
 window.addEventListener("beforeunload",
     function() {
-        endgame();
+        if (clientgamestate.playerid !== null)
+            endgame();
     },
     false);
+
+function updateStatus(statustext) {
+    var status = document.getElementById("status");
+    status.innerHTML = statustext;
+
+    if (statusblinktimeout !== null) {
+        clearTimeout(statusblinktimeout);
+    }
+
+    document.getElementById("status_bar").style.backgroundColor = "lightcoral";
+
+    statusblinktimeout = window.setTimeout(
+        function() {
+            document.getElementById("status_bar").style.backgroundColor = "whitesmoke";
+        },
+        1500);
+}
 
 
 /**
@@ -82,32 +111,36 @@ window.addEventListener("beforeunload",
  * These arguments tell this function where to gather the relevant information from the html.
  */
 function newgame(bool, context) {
-    //Decides where to get room name
     var roomid;
-    var RoomType;
+    var roomType;
     var playerid = document.getElementById("pidform").value;
 
+    //Decides where to get room name, which is either the button pressed or the fields on the new room entry form
     if (bool === true) {
         roomid = context.name.substring(0, context.name.indexOf(","));
-        RoomType = context.name.substring(context.name.indexOf(",") + 1);
+        roomType = context.name.substring(context.name.indexOf(",") + 1);
     } else {
         roomid = document.getElementById("newgamename").value;
-        RoomType = document.getElementById("newgametype").value;
+        roomType = document.getElementById("newgametype").value;
     }
 
-    //Empty entries
-    if (roomid === "") {
-        document.getElementById("status").innerHTML = "Please enter a room name";
+
+    //Only accept nonempty alphanumeric usernames under 20 characters long
+    if (!/^(?=.{0,20}$)[a-z0-9]+$/i.exec(roomid))
+    {
+        updateStatus("Please enter an alphanumeric room name under 20 characters long");
         return;
     }
-    if (playerid === "") {
-        document.getElementById("status").innerHTML = "Please enter a username";
+    if (!/^(?=.{0,20}$)[a-z0-9]+$/i.exec(playerid)) {
+        updateStatus("Please enter an alphanumeric username under 20 characters long");
         return;
     }
-    if (RoomType === "") {
-        document.getElementById("status").innerHTML = "Something went wrong with room typing";
+    if (roomType === "") {
+        updateStatus("Something went wrong with room typing");
         return;
     }
+
+    updateStatus("Attempting to log in");
 
     //Upon response
     var http = new XMLHttpRequest();
@@ -116,7 +149,7 @@ function newgame(bool, context) {
             var returnData = JSON.parse(http.responseText);
             if (http.status < 400) {
                 if (returnData) {
-                    document.getElementById("status").innerHTML = "Successfully logged in";
+                    updateStatus("Successfully logged in");
 
                     clientgamestate.RoomType = returnData.value;
 
@@ -135,10 +168,10 @@ function newgame(bool, context) {
                     document.getElementsByClassName("gameDiv")[0].style.display = "";
                     document.getElementsByClassName("loginDiv")[0].style.display = "none";
                 } else {
-                    document.getElementById("status").innerHTML = "Something went wrong, please referesh webpage";
+                    updateStatus("Something went wrong, please referesh webpage");
                 }
             } else {
-                document.getElementById("status").innerHTML = returnData.value;
+                updateStatus(returnData.value);
             }
         }
     };
@@ -149,7 +182,7 @@ function newgame(bool, context) {
         "&roomid=" +
         roomid +
         "&RoomType=" +
-        RoomType);
+        roomType);
     http.send();
 }
 
@@ -259,10 +292,10 @@ function showrooms(firsttime) {
                     }
 
                 } else {
-                    document.getElementById("status").innerHTML = "Something went wrong, please referesh webpage";
+                    updateStatus("Something went wrong, please referesh webpage");
                 }
             } else {
-                document.getElementById("status").innerHTML = returnData.value;
+                updateStatus(returnData.value);
             }
         }
     };
@@ -285,7 +318,9 @@ function showrooms(firsttime) {
  * Limits are used to keep the player in the visible game area.
  */
 function updategamewatcher() {
-    if (gameArea.keys && gameArea.keys[37]) {
+    if (gameArea.keys && gameArea.keys[37]) { //arrow left
+        //gameArea.keys[37] = false;
+
         if (clientgamestate.XPos <= -6) {
             clientgamestate.XPos = -6;
         } else {
@@ -294,7 +329,9 @@ function updategamewatcher() {
 
         //this passes in a copy of the game state, reference does not garauntee consistency for duration of draw function
         gameArea.drawGame(clientgamestate.RoomData, false);
-    } else if (gameArea.keys && gameArea.keys[39]) {
+    } else if (gameArea.keys && gameArea.keys[39]) { //arrow right
+        //gameArea.keys[39] = false;
+
         if (clientgamestate.XPos >= 94) {
             clientgamestate.XPos = 94;
         } else {
@@ -303,7 +340,9 @@ function updategamewatcher() {
 
         gameArea.drawGame(clientgamestate.RoomData, false);
     }
-    if (gameArea.keys && gameArea.keys[38]) {
+    if (gameArea.keys && gameArea.keys[38]) { //arrow down
+        //gameArea.keys[38] = false;
+
         if (clientgamestate.YPos <= -6) {
             clientgamestate.YPos = -6;
         } else {
@@ -311,7 +350,9 @@ function updategamewatcher() {
         }
 
         gameArea.drawGame(clientgamestate.RoomData, false);
-    } else if (gameArea.keys && gameArea.keys[40]) {
+    } else if (gameArea.keys && gameArea.keys[40]) { //arrow up
+        //gameArea.keys[40] = false;
+
         if (clientgamestate.YPos >= 90) {
             clientgamestate.YPos = 90;
         } else {
@@ -319,6 +360,7 @@ function updategamewatcher() {
         }
 
         gameArea.drawGame(clientgamestate.RoomData, false);
+
     }
 
 }
@@ -329,7 +371,7 @@ function updategamewatcher() {
 function updateColor() {
     var colorchange = document.getElementById("colorupdateform").value;
     if (colorchange === "") {
-        document.getElementById("status").innerHTML = "You must enter a HEX Color code.";
+        updateStatus("You must enter a HEX Color code.");
         return;
     }
 
@@ -342,12 +384,11 @@ function updateColor() {
     var validColor = /(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)/i.test(colorchange);
 
     if (!validColor) {
-        document.getElementById("status").innerHTML = "This is not a valid HEX Color code. Try #E79380";
+        updateStatus("This is not a valid HEX Color code. Try #E79380");
         document.getElementById("colorupdateform").value = "";
     } else {
         colorchange = colorchange.substring(1);
         clientgamestate.Color = colorchange;
-        document.getElementById("status").innerHTML = "Color update change queued";
         document.getElementById("colorupdateform").value = "";
     }
 }
@@ -382,13 +423,11 @@ function updategame() {
 
             var returnData = http.responseText;
             if (http.status < 400) {
-                if (returnData) {
-                    document.getElementById("status").innerHTML = "Successfully updated game";
-                } else {
-                    document.getElementById("status").innerHTML = "Something went wrong, please refresh the page.";
+                if (!returnData) {
+                    updateStatus("Something went wrong, please refresh the page.");
                 }
             } else {
-                document.getElementById("status").innerHTML = returnData;
+                updateStatus(returnData);
             }
         }
     };
@@ -400,8 +439,6 @@ function updategame() {
         'Color': clientgamestate.Color
     };
 
-
-    //TODO should send the standard player JSON type, rather than individual fields
     http.open("GET",
         "api/Room/UpdateGame/?playerid=" +
         clientgamestate.playerid +
@@ -449,11 +486,11 @@ function getgame(overrideClientState, newgame) {
                         window.setTimeout(getgame(false, false), SERVER_READ_TIME);
                     }
                 } else {
-                    document.getElementById("status").innerHTML = "Something went wrong. Please refresh webpage.";
+                    updateStatus("Something went wrong. Please refresh webpage.");
                     window.setTimeout(getgame(false, false), SERVER_READ_TIME);
                 }
             } else {
-                document.getElementById("status").innerHTML = returnData;
+                updateStatus(returnData);
                 window.setTimeout(getgame(false, false), SERVER_READ_TIME);
             }
         }
@@ -479,7 +516,7 @@ function endgame() {
                 //If successful, refresh webpage to original state
                 location.reload();
             } else {
-                document.getElementById("status").innerHTML = returnData;
+                updateStatus(returnData);
             }
         }
     };
@@ -499,7 +536,7 @@ function endgame() {
 
 function getPlayerStats() {
 
-    document.getElementById("status").innerHTML = "Player statistics request sent. This may take a minute.";
+    updateStatus("Player statistics request sent. This may take a minute.");
 
     //Upon response
     var http = new XMLHttpRequest();
@@ -508,23 +545,20 @@ function getPlayerStats() {
             var returnData = JSON.parse(http.responseText);
             if (http.status < 400) {
                 if (returnData) {
-                    document.getElementById("status").innerHTML = "Gathered Statistics";
-
-                    alert("Player Statistics" +
-                        "\n=================" +
-                        "\nNumber of Accounts: " +
-                        returnData.NumAccounts +
-                        "\nNumber of Players Logged in: " +
-                        returnData.NumLoggedIn +
-                        "\nAverage Num Logins / Person: " +
-                        returnData.AvgNumLogins +
-                        "\nAverage Account Age (seconds): " +
-                        returnData.AvgAccountAge);
+                    document.getElementById("status").innerHTML =
+                        "Num. Accounts: " +
+                        returnData.NumAccounts + " | " +
+                        "Num. Logged in: " +
+                        returnData.NumLoggedIn + " | " +
+                        "Avg. Logins / Account: " +
+                        returnData.AvgNumLogins.toFixed(3) + " | " +
+                        "Average Account Age (hours): " +
+                        (returnData.AvgAccountAge / 3600.0).toFixed(3);
                 } else {
-                    document.getElementById("status").innerHTML = "Something went wrong with gathering stats.";
+                    updateStatus("Something went wrong with gathering stats.");
                 }
             } else {
-                document.getElementById("status").innerHTML = returnData.value;
+                updateStatus(returnData.value);
             }
         }
     };

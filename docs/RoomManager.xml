@@ -25,6 +25,73 @@
             Called to dynamically get the correct port that related services will have open.
             </summary>
         </member>
+        <member name="T:RoomManager.Controllers.RoomStoreController">
+            <summary>
+            The role of this controller is to manage active, in-game state. The service knows which rooms it is hosting, from store:/rooms,
+            and coordinates requests to get the entire room state or to update state to those rooms. This
+            </summary>
+        </member>
+        <member name="M:RoomManager.Controllers.RoomStoreController.#ctor(System.Fabric.StatefulServiceContext,System.Net.Http.HttpClient,System.Fabric.FabricClient,RoomManager.ConfigSettings,Microsoft.ServiceFabric.Data.IReliableStateManager,RoomManager.RoomManager)">
+            <summary>
+                This constructor will execute the first time a function in the controller is called.
+            </summary>
+        </member>
+        <member name="M:RoomManager.Controllers.RoomStoreController.NewGame(System.String,System.String,System.String,System.String)">
+            <summary>
+            Requests here are routed from the PlayerStoreController. At this point that controller is waiting for this function to add the
+            data and return a success. Failure cases are handled by the NewGame in PlayerManager.
+            </summary>
+            <param name="roomid">room to find or create to store this player</param>
+            <param name="playerid">the playerid to put in room</param>
+            <param name="playerdata">the player data to link to the player</param>
+            <param name="roomtype">which room to make if making a new room</param>
+            <returns>200 success code if successfully logged in, appropriate failure code otherwise.</returns>
+        </member>
+        <member name="M:RoomManager.Controllers.RoomStoreController.Exists(System.String,System.String)">
+            <summary>
+            In states where something went wrong and PlayerManager or RoomManager disagree, PlayerManager will resolve these by checking
+            with the room it thinks the player should be in. This is a read-only look into existence of a player in a room.
+            </summary>
+            <param name="roomid">the room to check in for the player</param>
+            <param name="playerid">the player to look for</param>
+            <returns>If successful: a 200 with either true or false. If not, the appropriate failure code. </returns>
+        </member>
+        <member name="M:RoomManager.Controllers.RoomStoreController.GetRooms">
+            <summary>
+            Simple iterator returns all the rooms current on this partition. Returns as a List that will be appended to the lists of
+            other partitions by the WebService.
+            </summary>
+            <returns> List of KeyValuePair of (string, Room)</returns>
+        </member>
+        <member name="M:RoomManager.Controllers.RoomStoreController.GetGame(System.String)">
+            <summary>
+            This is the game request that will most likely see the most throughput. Each client of each room will call this function on
+            the order of 20 times a second. Grabs the entire state of the requested room and returns it. Future optimizations may be
+            a memory update system: returning current memory cached data and updating periodically, or enforcing state and never needing
+            to update memory besides during failover.
+            </summary>
+            <param name="roomid"></param>
+            <returns>List of KeyValuePair of (playerid, Player)</returns>
+        </member>
+        <member name="M:RoomManager.Controllers.RoomStoreController.UpdateGame(System.String,System.String,System.String)">
+            <summary>
+            Used by the client to update their game state, which currently includes position and color. Because of little game data,
+            a player's game state is entirely replaced by the client's game state.
+            </summary>
+            <param name="roomid">the room that you expect the player to be in</param>
+            <param name="playerid">the player you want to update</param>
+            <param name="playerdata">the serialized playerdata to update</param>
+            <returns>Success code if successful, or appropriate failure code</returns>
+        </member>
+        <member name="M:RoomManager.Controllers.RoomStoreController.EndGame(System.String,System.String)">
+            <summary>
+            Handles the coordination of an end game. This includes handing off the most recent player data to the PlayerManager, and if
+            successful, removing that player from the room. It is important that we do not remove data until the player manager has that data.
+            </summary>
+            <param name="roomid"></param>
+            <param name="playerid"></param>
+            <returns></returns>
+        </member>
         <member name="M:RoomManager.Program.Main">
             <summary>
             This is the entry point of the service host process.
@@ -35,11 +102,62 @@
             The FabricRuntime creates an instance of this class for each service type instance. 
             </summary>
         </member>
+        <member name="M:RoomManager.RoomManager.#ctor(System.Fabric.StatefulServiceContext)">
+            <summary>
+            This class is the basis of the stateful service. Functions can be defined here and called by other service if using reverse proxy,
+            or controllers can call functions here. In this application we can store cached information that we would like controllers to have
+            access to, since they cannot maintain their own state.
+            </summary>
+            <param name="context"></param>
+        </member>
+        <member name="F:RoomManager.RoomManager.IsActive">
+            <summary>
+            The IsActive token is used to ensure our controllers do not serve requests until the application is initialized. Controller
+            functions check this token before they serve requests. When RunAsync is called on the Service is when it is ready to
+            serve requests.
+            </summary>
+        </member>
+        <member name="M:RoomManager.RoomManager.RunAsync(System.Threading.CancellationToken)">
+            <summary>
+            Called when the Service is started up. It is here that you would initialize things in your service or begin long-running tasks.
+            </summary>
+            <param name="cancellationToken"></param>
+        </member>
         <member name="M:RoomManager.RoomManager.CreateServiceReplicaListeners">
             <summary>
             Optional override to create listeners (like tcp, http) for this service instance.
             </summary>
             <returns>The collection of listeners.</returns>
+        </member>
+        <member name="T:RoomManager.Startup">
+            <summary>
+            Class contains configurations to build the environment for this service. It is run on a service's first deployment.
+            </summary>
+        </member>
+        <member name="M:RoomManager.Startup.#ctor(Microsoft.AspNetCore.Hosting.IHostingEnvironment)">
+            <summary>
+            Creates a configuration file that considers the environment the service is running on.
+            </summary>
+            <param name="env"></param>
+        </member>
+        <member name="P:RoomManager.Startup.Configuration">
+            <summary>
+            Called upon configuration.
+            </summary>
+        </member>
+        <member name="M:RoomManager.Startup.ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection)">
+            <summary>
+            This method gets called by the runtime. Use this method to add services to the container.
+            </summary>
+            <param name="services"></param>hod to add services to the container.
+        </member>
+        <member name="M:RoomManager.Startup.Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder,Microsoft.AspNetCore.Hosting.IHostingEnvironment,Microsoft.Extensions.Logging.ILoggerFactory)">
+            <summary>
+            This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+            </summary>
+            <param name="app"></param>
+            <param name="env"></param>
+            <param name="loggerFactory"></param>
         </member>
     </members>
 </doc>

@@ -7,6 +7,13 @@ namespace Common
 {
     using System;
 
+    public enum RoomTypes
+    {
+        Office,
+        Garden,
+        Cafe
+    }
+
     public enum LogState
     {
         LoggedIn,

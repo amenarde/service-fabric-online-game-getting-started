@@ -2,10 +2,10 @@
 <Application xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="fabric:/SampleGame" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="PlayerManager_PartitionCount" Value="3" />
-    <Parameter Name="PlayerManager_MinReplicaSetSize" Value="3" />
+    <Parameter Name="PlayerManager_MinReplicaSetSize" Value="2" />
     <Parameter Name="PlayerManager_TargetReplicaSetSize" Value="3" />
     <Parameter Name="RoomManager_PartitionCount" Value="3" />
-    <Parameter Name="RoomManager_MinReplicaSetSize" Value="3" />
+    <Parameter Name="RoomManager_MinReplicaSetSize" Value="2" />
     <Parameter Name="RoomManager_TargetReplicaSetSize" Value="3" />
     <Parameter Name="WebService_InstanceCount" Value="3" />
   </Parameters>
