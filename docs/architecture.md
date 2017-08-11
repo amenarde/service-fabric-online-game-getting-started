@@ -1,4 +1,4 @@
-# Application architecture
+# Application design
 
 The application consists of three service fabric services and the javascript client:
 
@@ -9,12 +9,15 @@ The application consists of three service fabric services and the javascript cli
 | Player Manager | Stateful service that holds long term account data and player data when a player is logged out. |
 | Room Manager | Holds the live game state in active rooms that make it easy for clients to get up-to-date game information and update the game state of their player. |
 
+## Architecture
 Here is a general look at how these different parts interact in the game:
 
 ![Architecture Diagram][architecture]
 
 Here is a look at how different actions by the user get routed through the application:
 ![Route Diagram][route]
+
+## Status codes to communicate state
 
 Similarly, the API returns different status codes to communicate between services. Here are the status codes and their implied meaning in this application:
 
@@ -24,6 +27,22 @@ Similarly, the API returns different status codes to communicate between service
 | 400 | This code signifies a bad request, for example if the user tries to log in with an account that is already logged in. |
 | 503 | This is a retry request, which means there was a temporary failure. If received by the WebService this means to re-resolve the request and try again, and if it is received by the client either the user or the client can handle retrying, depending on context. |
 | 500 | This is a failure code, which will generally be propogated to the user asking them to either refresh the page, come back later, or submit a bug report. |
+
+## Service Walkthrough: `PlayerManager/`
+
+Here we are going to walk through a service and what different files do.
+
+**`PlayerManager.cs`:** If you are not using a controller model, like this application does, here is where the most of your workload would be written. Here you can write functions that can be called by your controllers and by other services using ServiceProxy. `RunAsync` also lives here, as well as your `CreateServiceReplicaListeners`, which we use to create the http listener that leads to our controller. We can add new arguments to our controllers constructor by using `.AddSingleton()`.
+
+**`Controllers/PlayerStoreController.cs`:** In this application, most of the workload is done by this controller. Since we gave it access to `StateManager` and other pertinent information in `PlayerManager.cs`, it can work with our Reliable Collections and route calls. Http requests are configured to come to this controller and automatically land on the necessary function. For example, `[Route("api/[controller]/NewGame")]` makes it such that requests starting with `[ReverseProxyAddress]/api/PlayerStore/NewGame/` get served by `NewGameAsync`.
+
+**`Startup.cs`:** For most basic purposes, you will not need to touch this file. I have `services.AddMvc()`, which is used to set up my http pipeline. Other than that this file takes configurations you have and lets the environment know when the service first starts up.
+
+**`ConfigSettings.cs`:** Here you can see there is `RoomManagerName`, `ReverseProxyPort`, and then another mention of them in `UpdateConfigSettings`. These are used to make this service aware of the name of the `RoomManager` service, and which port `ReverseProxy` is on.
+
+**`PackageRoot/Config/Settings.xml`**: This is where those configuration settings are coming from, and these represent two parameters that build will require to be defined in the applications service manifest, so that this service knows about the other two.
+
+You most likely will not need to touch any of the other files in the Service, which generally serve purposes for debugging, logging, and getting the service set up in its environment.
 
 [architecture]: ../docs/media/architecture.png
 [route]: ../docs/media/routes.png
