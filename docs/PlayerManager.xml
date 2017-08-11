@@ -33,13 +33,12 @@
                 account age, settings, and how often an account is used.
             </summary>
         </member>
-        <member name="M:PlayerManager.Controllers.PlayerStoreController.#ctor(System.Fabric.StatefulServiceContext,System.Net.Http.HttpClient,System.Fabric.FabricClient,PlayerManager.ConfigSettings,Microsoft.ServiceFabric.Data.IReliableStateManager,PlayerManager.PlayerManager)">
+        <member name="M:PlayerManager.Controllers.PlayerStoreController.#ctor(System.Fabric.StatefulServiceContext,System.Net.Http.HttpClient,PlayerManager.ConfigSettings,Microsoft.ServiceFabric.Data.IReliableStateManager,PlayerManager.PlayerManager)">
             <summary>
                 This constructor will execute the first time a function in the controller is called.
             </summary>
             <param name="serviceContext"></param>
             <param name="httpClient"></param>
-            <param name="fabricClient"></param>
             <param name="configSettings"></param>
             <param name="stateManager"></param>
             <param name="cache"></param>

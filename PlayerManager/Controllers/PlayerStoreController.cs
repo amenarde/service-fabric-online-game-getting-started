@@ -29,11 +29,11 @@ namespace PlayerManager.Controllers
     {
         private static readonly Uri PlayersDictionaryName = new Uri("store:/players");
         private readonly HttpClient httpClient;
-        private readonly FabricClient fabricClient;
         private readonly IReliableStateManager stateManager;
         private readonly ConfigSettings configSettings;
         private readonly StatefulServiceContext serviceContext;
 
+        private readonly string[] startingColors;
         private PlayerManager cache;
         private string proxy;
 
@@ -42,23 +42,25 @@ namespace PlayerManager.Controllers
         /// </summary>
         /// <param name="serviceContext"></param>
         /// <param name="httpClient"></param>
-        /// <param name="fabricClient"></param>
         /// <param name="configSettings"></param>
         /// <param name="stateManager"></param>
         /// <param name="cache"></param>
         public PlayerStoreController(
-            StatefulServiceContext serviceContext, HttpClient httpClient, FabricClient fabricClient, ConfigSettings configSettings,
+            StatefulServiceContext serviceContext, HttpClient httpClient,  ConfigSettings configSettings,
             IReliableStateManager stateManager, PlayerManager cache)
         {
             this.stateManager = stateManager;
             this.httpClient = httpClient;
-            this.fabricClient = fabricClient;
             this.configSettings = configSettings;
             this.serviceContext = serviceContext;
             this.cache = cache;
 
             this.RenewProxy();
+
+            this.startingColors = new string[] { "ADD8E6", "99FFCC", "CCCC99", 	"CCCCCC", "CCCCFF", "CCFF99", "CCFFCC", "CCFFFF", "FFCC99", "FFCCCC", "FFCCFF", "FFFF99", "FFFFCC" };
         }
+
+
 
         private void RenewProxy()
         {
@@ -107,7 +109,7 @@ namespace PlayerManager.Controllers
                         //State: Player does not exist / Cannot be in a game
                         Random rand = new Random();
                         //Generate a new player with a random position
-                        Player newPlayer = new Player(rand.Next() % 100 - 6, rand.Next() % 96 - 6, "ADD8E6");
+                        Player newPlayer = new Player(rand.Next() % 100 - 6, rand.Next() % 96 - 6, this.startingColors[rand.Next() % this.startingColors.Length]);
 
                         //Package the new player with its baseline statistics
                         PlayerPackage newPlayerPackage = new PlayerPackage(newPlayer, LogState.LoggedIn, 1, DateTime.UtcNow, roomid);

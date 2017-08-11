@@ -489,6 +489,9 @@ function getgame(overrideClientState, newgame) {
                     updateStatus("Something went wrong. Please refresh webpage.");
                     window.setTimeout(getgame(false, false), SERVER_READ_TIME);
                 }
+            } else if (http.status === 400) {
+                //This scenario would be hit if the player is kicked by the server for inactivity and is also the last person in a room
+                location.reload();
             } else {
                 updateStatus(returnData);
                 window.setTimeout(getgame(false, false), SERVER_READ_TIME);

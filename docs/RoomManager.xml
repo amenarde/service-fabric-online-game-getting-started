@@ -31,7 +31,7 @@
             and coordinates requests to get the entire room state or to update state to those rooms. This
             </summary>
         </member>
-        <member name="M:RoomManager.Controllers.RoomStoreController.#ctor(System.Fabric.StatefulServiceContext,System.Net.Http.HttpClient,System.Fabric.FabricClient,RoomManager.ConfigSettings,Microsoft.ServiceFabric.Data.IReliableStateManager,RoomManager.RoomManager)">
+        <member name="M:RoomManager.Controllers.RoomStoreController.#ctor(System.Fabric.StatefulServiceContext,System.Net.Http.HttpClient,RoomManager.ConfigSettings,Microsoft.ServiceFabric.Data.IReliableStateManager,RoomManager.RoomManager)">
             <summary>
                 This constructor will execute the first time a function in the controller is called.
             </summary>
@@ -102,6 +102,13 @@
             The FabricRuntime creates an instance of this class for each service type instance. 
             </summary>
         </member>
+        <member name="F:RoomManager.RoomManager.IsActive">
+            <summary>
+            The IsActive token is used to ensure our controllers do not serve requests until the application is initialized. Controller
+            functions check this token before they serve requests. When RunAsync is called on the Service is when it is ready to
+            serve requests.
+            </summary>
+        </member>
         <member name="M:RoomManager.RoomManager.#ctor(System.Fabric.StatefulServiceContext)">
             <summary>
             This class is the basis of the stateful service. Functions can be defined here and called by other service if using reverse proxy,
@@ -109,13 +116,6 @@
             access to, since they cannot maintain their own state.
             </summary>
             <param name="context"></param>
-        </member>
-        <member name="F:RoomManager.RoomManager.IsActive">
-            <summary>
-            The IsActive token is used to ensure our controllers do not serve requests until the application is initialized. Controller
-            functions check this token before they serve requests. When RunAsync is called on the Service is when it is ready to
-            serve requests.
-            </summary>
         </member>
         <member name="M:RoomManager.RoomManager.RunAsync(System.Threading.CancellationToken)">
             <summary>

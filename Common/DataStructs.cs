@@ -7,6 +7,8 @@ namespace Common
 {
     using System;
 
+    // These represent the rooms a user can join. They should be consistent through stack, which means also in the JS Enum equivalent
+    // as well as having a corresponding image file in the sites static content.
     public enum RoomTypes
     {
         Office,
@@ -14,18 +16,21 @@ namespace Common
         Cafe
     }
 
+    // Players in the PlayerManager stores either do not exist, which means they do not have an account, or are in one of these two states.
+    // These manage what is the priority data for this player.
     public enum LogState
     {
         LoggedIn,
         LoggedOut
     }
 
+    // Used as a vessle for transporting player statistics through stack. Must be consistent through stack.
     public struct PlayerStats
     {
-        public long NumAccounts;
-        public long NumLoggedIn;
-        public float AvgNumLogins;
-        public double AvgAccountAge; //seconds
+        public long NumAccounts; // Number of accounts in the entire application
+        public long NumLoggedIn; // Number of those accounts actively marked as logged in
+        public float AvgNumLogins; // Avg. # logins of all these accounts
+        public double AvgAccountAge; //Avg account age, in seconds
 
         public PlayerStats(long numAccounts, long numLoggedIn, float avgNumLogins, double avgAccountAge)
         {
@@ -36,14 +41,14 @@ namespace Common
         }
     }
 
-
+    // The wrapper for a Player in the cold player store
     public struct PlayerPackage
     {
-        public Player Player;
-        public LogState State;
-        public int NumLogins;
-        public DateTime FirstLogin; //UTC
-        public string RoomId;
+        public Player Player; // Player game data
+        public LogState State; // Whether they are currently logged in or not
+        public int NumLogins; // Number of times they have logged in
+        public DateTime FirstLogin; // Stored in UTC
+        public string RoomId; // If they are in LoggedIn, this points to where they are logged in, otherwise its value is meaningless.
 
         public PlayerPackage(Player player, LogState state, int numLogins, DateTime firstLogin, string roomid)
         {
@@ -55,10 +60,11 @@ namespace Common
         }
     }
 
+    //The wrapper for the player in the hot player store
     public struct ActivePlayer
     {
-        public Player Player;
-        public DateTime LastUpdated; //UTC
+        public Player Player; // Player game data
+        public DateTime LastUpdated; // Last time that player logged in or updated their game, in UTC
 
         public ActivePlayer(Player player, DateTime lastUpdated)
         {
@@ -67,12 +73,12 @@ namespace Common
         }
     }
 
-
+    //The game-relevant info tied to players
     public struct Player
     {
-        public int XPos;
-        public int YPos;
-        public string Color;
+        public int XPos; // their x position
+        public int YPos; // their y position
+        public string Color; // their color hex code
 
         public Player(int xpos, int ypos, string color)
         {
@@ -82,13 +88,11 @@ namespace Common
         }
     }
 
-    /// <summary>
-    ///     This is the struct that contains relevant room data: the number of players and the room type
-    /// </summary>
+    //This is the struct that contains relevant room data.
     public struct Room
     {
-        public int NumPlayers;
-        public string RoomType;
+        public int NumPlayers; // Number of players active in the room
+        public string RoomType; // What type of room it is
 
 
         public Room(int numplayers, string roomtype)

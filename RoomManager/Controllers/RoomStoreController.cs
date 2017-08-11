@@ -26,7 +26,6 @@ namespace RoomManager.Controllers
         private static readonly Uri RoomDictionaryName = new Uri("store:/rooms");
 
         private readonly HttpClient httpClient;
-        private readonly FabricClient fabricClient;
         private readonly IReliableStateManager stateManager;
         private readonly ConfigSettings configSettings;
         private readonly StatefulServiceContext serviceContext;
@@ -38,12 +37,11 @@ namespace RoomManager.Controllers
         ///     This constructor will execute the first time a function in the controller is called.
         /// </summary>
         public RoomStoreController(
-            StatefulServiceContext serviceContext, HttpClient httpClient, FabricClient fabricClient, ConfigSettings configSettings,
+            StatefulServiceContext serviceContext, HttpClient httpClient, ConfigSettings configSettings,
             IReliableStateManager stateManager, RoomManager cache)
         {
             this.stateManager = stateManager;
             this.httpClient = httpClient;
-            this.fabricClient = fabricClient;
             this.configSettings = configSettings;
             this.serviceContext = serviceContext;
             this.cache = cache;
@@ -55,8 +53,8 @@ namespace RoomManager.Controllers
         // during failover or regular load balancing.
         private void RenewProxy()
         {
-            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:" + //gets the IP address of the application
-                         $"{this.configSettings.ReverseProxyPort}/" + //gets the port of the proxy used to communicate
+            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:" +
+                         $"{this.configSettings.ReverseProxyPort}/" +
                          $"{this.serviceContext.CodePackageActivationContext.ApplicationName.Replace("fabric:/", "")}/" +
                          $"{this.configSettings.PlayerManagerName}/api/PlayerStore/";
         }

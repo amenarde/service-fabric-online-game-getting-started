@@ -48,8 +48,9 @@ namespace WebService.Controllers
         // during failover or regular load balancing.
         private void RenewProxy()
         {
-            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:" + //gets the IP address of the application
-                         $"{this.configSettings.ReverseProxyPort}/" + //gets the port of the proxy used to communicate
+            // gets the IP address of the application, and the port of the proxy, adds fabric to it, and address to controller
+            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:" +
+                         $"{this.configSettings.ReverseProxyPort}/" +
                          $"{this.serviceContext.CodePackageActivationContext.ApplicationName.Replace("fabric:/", "")}/" +
                          $"{this.configSettings.PlayerManagerName}/api/PlayerStore/";
         }
@@ -65,10 +66,9 @@ namespace WebService.Controllers
         [HttpGet]
         public async Task<IActionResult> NewGameAsync(string playerid, string roomid, string roomtype)
         {
-
-            //Only accept nonempty alphanumeric usernames under 20 characters long
-            //this should have been handled in javascript, may point to aggressive behavior
-            //also verify no one tries to make a room other than those provided
+            // Only accept nonempty alphanumeric usernames under 20 characters long
+            // this should have been handled in javascript, may point to aggressive behavior
+            // also verify no one tries to make a room other than those provided
             Regex names = new Regex(@"(?i)([a-z?0-9?\-?]\s?){0,10}");
             if (!names.IsMatch(playerid))
             {
@@ -151,7 +151,7 @@ namespace WebService.Controllers
                         result.AvgAccountAge = 0;
                     if (float.IsNaN(result.AvgNumLogins))
                         result.AvgNumLogins = 0;
-                }   
+                }
 
                 //Return our stats and mark them as freshly updated
                 Startup.PlayerStats = result;

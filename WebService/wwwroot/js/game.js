@@ -54,11 +54,15 @@ var gameArea = {
             roomDraw(this.context, Math.min(this.canvas.width, this.canvas.height), "img/room.png");
         }
 
+        var foundMyself = false;
 
         clientgamestate.RoomData = returnData;
         for (var i = 0; i < returnData.length; i++) {
+
             //This function forces client to match server state when necessary, like login
             if (returnData[i].Key === clientgamestate.playerid) {
+                foundMyself = true;
+
                 if (overrideClientState === true) {
                     clientgamestate.XPos = returnData[i].Value.XPos;
                     clientgamestate.YPos = returnData[i].Value.YPos;
@@ -83,6 +87,10 @@ var gameArea = {
                     parseInt(this.canvas.height * (returnData[i].Value.YPos / 100)),
                     returnData[i].Key,
                     returnData[i].Value.Color);
+            }
+
+            if (!foundMyself) {
+                location.reload();
             }
         }
     }

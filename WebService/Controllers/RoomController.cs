@@ -119,13 +119,11 @@ namespace WebService.Controllers
             HttpResponseMessage response = await this.httpClient.GetAsync(url);
 
             //Renew the proxy if the stateful service has moved
-            if ((int)response.StatusCode == 404)
-            {
-                this.RenewProxy();
-                return await this.GetGameAsync(roomid);
-            }
+            if ((int) response.StatusCode != 404)
+                return this.StatusCode((int) response.StatusCode, await response.Content.ReadAsStringAsync());
 
-            return this.StatusCode((int) response.StatusCode, await response.Content.ReadAsStringAsync());
+            this.RenewProxy();
+            return await this.GetGameAsync(roomid);
         }
 
         /// <summary>
@@ -140,7 +138,6 @@ namespace WebService.Controllers
         [HttpGet]
         public async Task<IActionResult> UpdateGameAsync(string playerid, string roomid, string player)
         {
-
             //Unpackage the player data from its JSON representation
             Player p = JsonConvert.DeserializeObject<Player>(player);
 

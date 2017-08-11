@@ -68,7 +68,6 @@ namespace PlayerManager
                                         services => services
                                             .AddSingleton(new ConfigSettings(serviceContext))
                                             .AddSingleton(new HttpClient())
-                                            .AddSingleton(new FabricClient())
                                             .AddSingleton(serviceContext)
                                             .AddSingleton(this.StateManager)
                                             .AddSingleton(this))
