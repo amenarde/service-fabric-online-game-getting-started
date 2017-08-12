@@ -46,3 +46,24 @@ You most likely will not need to touch any of the other files in the Service, wh
 
 [architecture]: ../docs/media/architecture.png
 [route]: ../docs/media/routes.png
+
+## Game Design Features Walkthrough
+
+This game is also meant to demonstrate some useful features for online games in general. These can be used as reference for implementations of similar features, or be built on top of for additional functionality.
+
+| Feature | Description | Implementation |
+| :------ | :---------- | :------------- |
+| Input verification | Both check users input such as color codes, and help prevent malicious intent or cheating | `newgame()` in `site.js`; `NewGameAsync()` in `PlayerController.cs` |
+| Account Metrics | Allows for producers to understand how people are playing the game and add in new metrics | Metrics functions in `site.js`; `PlayerController.cs`, `PlayerStoreController.cs` |
+| Logging out inactive players | This helps ensure players can't find them in a state where they can't log in or are stuck logged in | `beforeunload` in `site.js`, `RunAsync()` in `RoomManager.cs` |
+| Random start parameters | Used to give new users a random color and position, can be adapted for any starting parameters | `Scenario 1` in `NewGame()` in `PlayerStoreController.cs` |
+| Multiple types of rooms | Allows for games to take place in different rooms. Could add functionality that moves players between rooms actively. | `drawGame()` in `Game.js`; as well as verified and stored with rooms |
+
+## Next Steps
+
+Check out these other helpful documents:
+- [Learn important Service Fabric concepts to support your readthrough of the code][3]
+- [Walk through the implementation of a new feature in the game.][5]
+
+[3]: ../master/docs/concepts.md
+[5]: ../master/docs/newfeature.md
