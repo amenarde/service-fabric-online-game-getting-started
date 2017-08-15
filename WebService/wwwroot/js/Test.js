@@ -74,7 +74,7 @@ var tests = [
             'Color': "f00"
         };
 
-        http.onreadystatechange = function() { httpreceivehelper(http, name, starttime, false); };
+        http.onreadystatechange = function() { httpreceivehelper(http, name, starttime, false); }; //fail
         http.open("GET", "api/Room/UpdateGame/?playerid=testplayer&roomid=testroom&player=" + JSON.stringify(player));
         http.send();
     },
@@ -84,7 +84,7 @@ var tests = [
         var http = new XMLHttpRequest();
         var starttime = performance.now();
 
-        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, false); };
+        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, false); }; //fail
         http.open("GET", "api/Room/EndGame/?playerid=testplayer&roomid=testroom");
         http.send();
     },
@@ -94,8 +94,18 @@ var tests = [
         var http = new XMLHttpRequest();
         var starttime = performance.now();
 
-        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, false); };
+        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, false); }; //fail
         http.open("GET", "api/Room/GetGame/?roomid=testroom");
+        http.send();
+    },
+
+    function () {
+        var name = "Can't make room with not known roomtype";
+        var http = new XMLHttpRequest();
+        var starttime = performance.now();
+
+        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, false); }; //fail
+        http.open("GET", "api/Player/NewGame/?playerid=testplayer&roomid=testroom&roomtype=NotType");
         http.send();
     },
 
@@ -106,8 +116,8 @@ var tests = [
         var http = new XMLHttpRequest();
         var starttime = performance.now();
 
-        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, true); };
-        http.open("GET", "api/Player/NewGame/?playerid=testplayer&roomid=testroom");
+        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, true); }; //success
+        http.open("GET", "api/Player/NewGame/?playerid=testplayer&roomid=testroom&roomtype=Office");
         http.send();
         //at this point testplayer should be in room testroom
     },
@@ -117,7 +127,7 @@ var tests = [
         var http = new XMLHttpRequest();
         var starttime = performance.now();
 
-        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, true); };
+        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, true); }; //success
         http.open("GET", "api/Room/GetGame/?roomid=testroom");
         http.send();
     },
@@ -134,7 +144,7 @@ var tests = [
             'Color': "f00"
         };
 
-        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, true); };
+        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, true); }; //success
         http.open("GET", "api/Room/UpdateGame/?playerid=testplayer&roomid=testroom&player=" + JSON.stringify(player));
         http.send();
     },
@@ -144,8 +154,8 @@ var tests = [
         var http = new XMLHttpRequest();
         var starttime = performance.now();
 
-        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, true); };
-        http.open("GET", "api/Player/NewGame/?playerid=testplayer2&roomid=testroom");
+        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, true); }; //success
+        http.open("GET", "api/Player/NewGame/?playerid=testplayer2&roomid=testroom&roomtype=Office");
         http.send();
         //at this point testplayer and testplayer2 should be in room testroom
     },
@@ -156,59 +166,91 @@ var tests = [
         var starttime = performance.now();
 
         http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, false); }; //fail
-        http.open("GET", "api/Player/NewGame/?playerid=testplayer&roomid=testroom");
+        http.open("GET", "api/Player/NewGame/?playerid=testplayer&roomid=testroom&roomtype=Office");
         http.send();
     },
 
     function () {
-        var name = "basic end game";
+        var name = "Can't login in with an active player - different room";
         var http = new XMLHttpRequest();
         var starttime = performance.now();
 
-        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, true); };
-        http.open("GET", "api/Player/EndGame/?playerid=testplayer&roomid=testroom");
+        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, false); }; //fail
+        http.open("GET", "api/Player/NewGame/?playerid=testplayer&roomid=testroom2&roomtype=Office");
+        http.send();
+    },
+
+    function () {
+        var name = "Basic end game";
+        var http = new XMLHttpRequest();
+        var starttime = performance.now();
+
+        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, true); }; //success
+        http.open("GET", "api/Room/EndGame/?playerid=testplayer2&roomid=testroom");
         http.send();
         //at this point testplayer should be in room testroom
     },
 
-    // CLEANUP FUNCTION
     function () {
+        var name = "Can't logout someone already logged out";
         var http = new XMLHttpRequest();
-        http.onreadystatechange = function () {
-            if (http.readyState === 4) {
-                currenttest++;
-                if (currenttest < tests.length) {
-                    tests[currenttest]();
-                }
-            }
-        };
-        http.open("GET", "api/Player/EndGame/?playerid=testplayer2&roomid=testroom");
+        var starttime = performance.now();
+
+        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, false); }; //fail
+        http.open("GET", "api/Room/EndGame/?playerid=testplayer2&roomid=testroom");
         http.send();
         //at this point testplayer should be in room testroom
+    },
+
+    function () {
+        var name = "Get player statistics";
+        var http = new XMLHttpRequest();
+        var starttime = performance.now();
+
+        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, true); }; //success
+        http.open("GET", "api/Player/GetStats");
+        http.send();
     },
 
     //Bad or malicious requests
 
     function () {
-        var name = "log in with too long a player name";
+        var name = "Log in with too long a player name";
         var http = new XMLHttpRequest();
         var starttime = performance.now();
 
-        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, false); };
+        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, false); }; //fail
         http.open("GET", "api/Player/NewGame/?playerid=abcdefghijklmnopqrstuvwxyz1234567890" +
             "&roomid=testroom");
         http.send();
     },
 
     function () {
-        var name = "log in with too long a room name";
+        var name = "Log in with too long a room name";
         var http = new XMLHttpRequest();
         var starttime = performance.now();
 
-        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, false); };
+        http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, false); }; //fail
         http.open("GET", "api/Player/NewGame/?playerid=testplayer2" +
             "&roomid=abcdefghijklmnopqrstuvwxyz1234567890");
         http.send();
+    },
+
+    function () {
+        testhelper("Initialized TimeOut test function, should return in 3 minutes", 0, true, 0); // NOT A TEST
+    },
+
+    function () {
+        setTimeout( function() {
+            var name = "Auto-log-off logged player in three minutes";
+            var http = new XMLHttpRequest();
+            var starttime = performance.now();
+
+            http.onreadystatechange = function () { httpreceivehelper(http, name, starttime, false); }; //fail
+            http.open("GET", "api/Room/EndGame/?playerid=testplayer&roomid=testroom");
+            http.send();
+            },
+        2100000);
     }
 
 ];

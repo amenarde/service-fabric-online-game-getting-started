@@ -28,7 +28,7 @@ var gameArea = {
         this.context = this.canvas.getContext("2d");
 
         //insert the canvas before the status bar
-        document.body.insertBefore(this.canvas, document.getElementElementById("status_bar"));
+        document.body.insertBefore(this.canvas, document.getElementById("status_bar"));
 
         //add in the keylisteners used for moving around the game
         window.addEventListener("keydown",

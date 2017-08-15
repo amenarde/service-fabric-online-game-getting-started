@@ -70,6 +70,22 @@ namespace PlayerManager.Controllers
             };
         }
 
+        private static ContentResult exceptionHandler(Exception e)
+        {
+            //Reresolve proxy and retry
+            if (e is FabricObjectClosedException || e is FabricNotPrimaryException)
+                return new ContentResult { StatusCode = 503, Content = e.Message };
+
+            //Retry the transaction
+            if (e is FabricTransientException || e is TimeoutException || e is TransactionFaultedException)
+                return new ContentResult { StatusCode = 503, Content = e.Message };
+
+            if (e is FabricException)
+                return new ContentResult { StatusCode = 500, Content = e.Message };
+
+            return new ContentResult { StatusCode = 500, Content = e.InnerException.Message };
+        }
+
         /// <summary>
         ///     Coordinates the new game process. This entails either gathering the player data or creating a new player, and
         ///     handing that data off to an active room. It coordinates the current state of the player by using the LogState 
@@ -104,7 +120,7 @@ namespace PlayerManager.Controllers
                     if (!playerOption.HasValue)
                     {
                         //State: Player does not exist / Cannot be in a game
-                        Random rand = new Random(DateTime.Now.Millisecond);
+                        Random rand = new Random(Environment.TickCount);
                         //Generate a new player with a random position
                         Player newPlayer = new Player(
                             rand.Next() % 100 - 6,
@@ -150,23 +166,20 @@ namespace PlayerManager.Controllers
                         return await this.NewGameRequestHelper(roomid, playerid, roomtype, playerOption.Value.Player);
                     }
 
-
-                    /////////////////////////////////////////////////////
-                    // SCENARIO 3: PLAYER HAS ACCOUNT AND IS LOGGED IN //
-                    /////////////////////////////////////////////////////
-
                     await tx.CommitAsync();
                     playerPackage = playerOption.Value;
                 } // end of tx
 
+                /////////////////////////////////////////////////////
+                // SCENARIO 3: PLAYER HAS ACCOUNT AND IS LOGGED IN //
+                /////////////////////////////////////////////////////
+
                 if (playerPackage.State == LogState.LoggedIn)
                 {
-                    /*
-                        * Scenario: This state will generally be the success state, where the player thinks they are logged in and the
-                        * appropriate room has the game. However, during login, it is possible that the process crashed between the time 
-                        * that the login transaction marked the data as logged in and that data being put in the room. We must check to
-                        * verify that this is not the state we are in.
-                        */
+                    // Scenario: This state will generally be the success state, where the player thinks they are logged in and the
+                    // appropriate room has the game. However, during login, it is possible that the process crashed between the time 
+                    // that the login transaction marked the data as logged in and that data being put in the room. We must check to
+                    // verify that this is not the state we are in.
 
                     int key = Partitioners.GetRoomPartition(playerPackage.RoomId);
 
@@ -215,22 +228,9 @@ namespace PlayerManager.Controllers
                 Environment.FailFast("Players must exist with a valid state attached to them");
                 return new ContentResult {StatusCode = 500};
             }
-            catch (FabricException e)
-            {
-                if (e is FabricObjectClosedException || e is FabricNotPrimaryException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                if (e is FabricTransientException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                return new ContentResult {StatusCode = 500, Content = e.Message};
-            }
-            catch (TimeoutException e)
-            {
-                //TODO: retry the transaction
-                return new ContentResult {StatusCode = 503, Content = e.Message};
-            }
             catch (Exception e)
             {
-                return new ContentResult {StatusCode = 500, Content = e.GetBaseException().Message};
+                return exceptionHandler(e);
             }
         }
 
@@ -278,10 +278,10 @@ namespace PlayerManager.Controllers
                     //The normal functionality, update the player and return a success
                     if (playerOption.Value.State == LogState.LoggedIn)
                     {
-                        PlayerPackage pp = playerOption.Value;
-                        pp.Player = player;
-                        pp.State = LogState.LoggedOut;
-                        await playdict.SetAsync(tx, playerid, pp);
+                        PlayerPackage newPlayerPackage = playerOption.Value;
+                        newPlayerPackage.Player = player;
+                        newPlayerPackage.State = LogState.LoggedOut;
+                        await playdict.SetAsync(tx, playerid, newPlayerPackage);
                         await tx.CommitAsync();
 
                         return new ContentResult {StatusCode = 200};
@@ -292,22 +292,9 @@ namespace PlayerManager.Controllers
                     return new ContentResult {StatusCode = 500};
                 }
             }
-            catch (FabricException e)
-            {
-                if (e is FabricObjectClosedException || e is FabricNotPrimaryException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                if (e is FabricTransientException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                return new ContentResult {StatusCode = 500, Content = e.Message};
-            }
-            catch (TimeoutException e)
-            {
-                //TODO: retry the transaction
-                return new ContentResult {StatusCode = 503, Content = e.Message};
-            }
             catch (Exception e)
             {
-                return new ContentResult {StatusCode = 500, Content = e.GetBaseException().Message};
+                return exceptionHandler(e);
             }
         }
 
@@ -353,22 +340,9 @@ namespace PlayerManager.Controllers
 
                 return this.Json(stats);
             }
-            catch (FabricException e)
-            {
-                if (e is FabricObjectClosedException || e is FabricNotPrimaryException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                if (e is FabricTransientException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                return new ContentResult {StatusCode = 500, Content = e.Message};
-            }
-            catch (TimeoutException e)
-            {
-                //TODO: retry the transaction
-                return new ContentResult {StatusCode = 503, Content = e.Message};
-            }
             catch (Exception e)
             {
-                return new ContentResult {StatusCode = 500, Content = e.GetBaseException().Message};
+                return exceptionHandler(e);
             }
         }
 

@@ -83,6 +83,9 @@ namespace RoomManager
 
                 // For each room, get an enumerator, find players that are inactive, and ask for them to be logged off.
                 foreach (string roomName in roomList)
+                {
+                    List<KeyValuePair<string, ActivePlayer>> activePlayerList = new List<KeyValuePair<string, ActivePlayer>>();
+
                     using (ITransaction tx = this.StateManager.CreateTransaction())
                     {
                         IReliableDictionary<string, ActivePlayer> activeroom =
@@ -91,18 +94,18 @@ namespace RoomManager
                         // Get an enumerator over this room
                         IAsyncEnumerable<KeyValuePair<string, ActivePlayer>> enumerable = await activeroom.CreateEnumerableAsync(tx);
                         IAsyncEnumerator<KeyValuePair<string, ActivePlayer>> activeRoomEnumerator = enumerable.GetAsyncEnumerator();
-                        List<KeyValuePair<string, ActivePlayer>> activePlayerList = new List<KeyValuePair<string, ActivePlayer>>();
 
                         while (await activeRoomEnumerator.MoveNextAsync(CancellationToken.None))
                             activePlayerList.Add(activeRoomEnumerator.Current);
 
                         await tx.CommitAsync();
-
-                        foreach (KeyValuePair<string, ActivePlayer> player in activePlayerList)
-                            // For each player, check if the time since they were last updated is greater than the inactivity timeout
-                            if (DateTime.UtcNow.Subtract(player.Value.LastUpdated) > InactivityLogoutSeconds)
-                                await roomController.EndGame(roomName, player.Key);
                     }
+
+                    foreach (KeyValuePair<string, ActivePlayer> player in activePlayerList)
+                        // For each player, check if the time since they were last updated is greater than the inactivity timeout
+                        if (DateTime.UtcNow.Subtract(player.Value.LastUpdated) > InactivityLogoutSeconds)
+                            await roomController.EndGame(roomName, player.Key);
+                }
 
                 await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
             }

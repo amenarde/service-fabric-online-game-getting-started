@@ -47,6 +47,31 @@ namespace RoomManager.Controllers
             this.RenewProxy();
         }
 
+        // Should be run to update the address to the stateful service, which may change when the service moves to a different node
+        // during failover or regular load balancing.
+        private void RenewProxy()
+        {
+            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:" +
+                         $"{this.configSettings.ReverseProxyPort}/" +
+                         $"{this.serviceContext.CodePackageActivationContext.ApplicationName.Replace("fabric:/", "")}/" +
+                         $"{this.configSettings.PlayerManagerName}/api/PlayerStore/";
+        }
+
+        private static ContentResult exceptionHandler(Exception e)
+        {
+            //Reresolve proxy and retry
+            if (e is FabricObjectClosedException || e is FabricNotPrimaryException)
+                return new ContentResult { StatusCode = 503, Content = e.Message };
+
+            //Retry the transaction
+            if (e is FabricTransientException || e is TimeoutException || e is TransactionFaultedException)
+                return new ContentResult { StatusCode = 503, Content = e.Message };
+
+            if (e is FabricException)
+                return new ContentResult { StatusCode = 500, Content = e.Message };
+
+            return new ContentResult { StatusCode = 500, Content = e.InnerException.Message };
+        }
 
         /// <summary>
         /// Requests here are routed from the PlayerStoreController. At this point that controller is waiting for this function to add the
@@ -79,7 +104,7 @@ namespace RoomManager.Controllers
                 using (ITransaction tx = this.stateManager.CreateTransaction())
                 {
                     //Find the room in the room dictionary
-                    ConditionalValue<Room> roomOption = await roomdict.TryGetValueAsync(tx, roomid);
+                    ConditionalValue<Room> roomOption = await roomdict.TryGetValueAsync(tx, roomid, LockMode.Update);
 
                     if (!roomOption.HasValue)
                     {
@@ -89,9 +114,9 @@ namespace RoomManager.Controllers
                     else
                     {
                         //Scenario: Room does exist
-                        Room r = roomOption.Value;
-                        r.NumPlayers++;
-                        await roomdict.SetAsync(tx, roomid, r);
+                        Room newRoom = roomOption.Value;
+                        newRoom.NumPlayers++;
+                        await roomdict.SetAsync(tx, roomid, newRoom);
                     }
 
                     //Add the data to that room
@@ -101,22 +126,9 @@ namespace RoomManager.Controllers
 
                 return new ContentResult {StatusCode = 200, Content = "Successfully Logged In"};
             }
-            catch (FabricException e)
-            {
-                if (e is FabricObjectClosedException || e is FabricNotPrimaryException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                if (e is FabricTransientException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                return new ContentResult {StatusCode = 500, Content = e.Message};
-            }
-            catch (TimeoutException e)
-            {
-                //TODO: retry the transaction
-                return new ContentResult {StatusCode = 503, Content = e.Message};
-            }
             catch (Exception e)
             {
-                return new ContentResult {StatusCode = 500, Content = e.GetBaseException().Message};
+                return exceptionHandler(e);
             }
         }
 
@@ -163,22 +175,9 @@ namespace RoomManager.Controllers
 
                 return new ContentResult {StatusCode = 200, Content = "true"};
             }
-            catch (FabricException e)
-            {
-                if (e is FabricObjectClosedException || e is FabricNotPrimaryException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                if (e is FabricTransientException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                return new ContentResult {StatusCode = 500, Content = e.Message};
-            }
-            catch (TimeoutException e)
-            {
-                //TODO: retry the transaction
-                return new ContentResult {StatusCode = 503, Content = e.Message};
-            }
             catch (Exception e)
             {
-                return new ContentResult {StatusCode = 500, Content = e.GetBaseException().Message};
+                return exceptionHandler(e);
             }
         }
 
@@ -214,22 +213,9 @@ namespace RoomManager.Controllers
 
                 return new ContentResult {StatusCode = 200, Content = JsonConvert.SerializeObject(result)};
             }
-            catch (FabricException e)
-            {
-                if (e is FabricObjectClosedException || e is FabricNotPrimaryException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                if (e is FabricTransientException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                return new ContentResult {StatusCode = 500, Content = e.Message};
-            }
-            catch (TimeoutException e)
-            {
-                //TODO: retry the transaction
-                return new ContentResult {StatusCode = 503, Content = e.Message};
-            }
             catch (Exception e)
             {
-                return new ContentResult {StatusCode = 500, Content = e.GetBaseException().Message};
+                return exceptionHandler(e);
             }
         }
 
@@ -278,22 +264,9 @@ namespace RoomManager.Controllers
 
                 return new ContentResult {StatusCode = 200, Content = JsonConvert.SerializeObject(result)};
             }
-            catch (FabricException e)
-            {
-                if (e is FabricObjectClosedException || e is FabricNotPrimaryException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                if (e is FabricTransientException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                return new ContentResult {StatusCode = 500, Content = e.Message};
-            }
-            catch (TimeoutException e)
-            {
-                //TODO: retry the transaction
-                return new ContentResult {StatusCode = 503, Content = e.Message};
-            }
             catch (Exception e)
             {
-                return new ContentResult {StatusCode = 500, Content = e.GetBaseException().Message};
+                return exceptionHandler(e);
             }
         }
 
@@ -353,22 +326,9 @@ namespace RoomManager.Controllers
 
                 return new ContentResult {StatusCode = 200, Content = "Game successfully updated"};
             }
-            catch (FabricException e)
-            {
-                if (e is FabricObjectClosedException || e is FabricNotPrimaryException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                if (e is FabricTransientException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                return new ContentResult {StatusCode = 500, Content = e.Message};
-            }
-            catch (TimeoutException e)
-            {
-                //TODO: retry the transaction
-                return new ContentResult {StatusCode = 503, Content = e.Message};
-            }
             catch (Exception e)
             {
-                return new ContentResult {StatusCode = 500, Content = e.GetBaseException().Message};
+                return exceptionHandler(e);
             }
         }
 
@@ -467,33 +427,10 @@ namespace RoomManager.Controllers
 
                 return new ContentResult {StatusCode = 200, Content = "Successfully logged out"};
             }
-            catch (FabricException e)
-            {
-                if (e is FabricObjectClosedException || e is FabricNotPrimaryException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                if (e is FabricTransientException)
-                    return new ContentResult {StatusCode = 503, Content = e.Message};
-                return new ContentResult {StatusCode = 500, Content = e.Message};
-            }
-            catch (TimeoutException e)
-            {
-                //TODO: retry the transaction
-                return new ContentResult {StatusCode = 503, Content = e.Message};
-            }
             catch (Exception e)
             {
-                return new ContentResult {StatusCode = 500, Content = e.GetBaseException().Message};
+                return exceptionHandler(e);
             }
-        }
-
-        // Should be run to update the address to the stateful service, which may change when the service moves to a different node
-        // during failover or regular load balancing.
-        private void RenewProxy()
-        {
-            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:" +
-                         $"{this.configSettings.ReverseProxyPort}/" +
-                         $"{this.serviceContext.CodePackageActivationContext.ApplicationName.Replace("fabric:/", "")}/" +
-                         $"{this.configSettings.PlayerManagerName}/api/PlayerStore/";
         }
     }
 }
