@@ -15,9 +15,7 @@ namespace PlayerManager.Controllers
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.ServiceFabric.Data;
     using Microsoft.ServiceFabric.Data.Collections;
-    using Microsoft.VisualStudio.TestTools.UnitTesting;
     using Newtonsoft.Json;
-    using System.Diagnostics;
 
     /// <summary>
     ///     The role of this controller is to manage the state of players that are offline. The dictionary in this service will
@@ -40,35 +38,36 @@ namespace PlayerManager.Controllers
         /// <summary>
         ///     This constructor will execute the first time a function in the controller is called.
         /// </summary>
-        /// <param name="serviceContext"></param>
         /// <param name="httpClient"></param>
         /// <param name="configSettings"></param>
-        /// <param name="stateManager"></param>
-        /// <param name="cache"></param>
+        /// <param name="playerManager"></param>
         public PlayerStoreController(
-            StatefulServiceContext serviceContext, HttpClient httpClient,  ConfigSettings configSettings,
-            IReliableStateManager stateManager, PlayerManager cache)
+            HttpClient httpClient, ConfigSettings configSettings, PlayerManager playerManager)
         {
-            this.stateManager = stateManager;
+            this.stateManager = playerManager.StateManager;
             this.httpClient = httpClient;
             this.configSettings = configSettings;
-            this.serviceContext = serviceContext;
-            this.cache = cache;
+            this.serviceContext = playerManager.Context;
+            this.cache = playerManager;
 
             this.RenewProxy();
 
-            this.startingColors = new string[] { "ADD8E6", "99FFCC", "CCCC99", 	"CCCCCC", "CCCCFF", "CCFF99", "CCFFCC", "CCFFFF", "FFCC99", "FFCCCC", "FFCCFF", "FFFF99", "FFFFCC" };
-        }
-
-
-
-        private void RenewProxy()
-        {
-            // Proxy to coordinate with RoomManager
-            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:" +
-                         $"{this.configSettings.ReverseProxyPort}/" +
-                         $"{this.serviceContext.CodePackageActivationContext.ApplicationName.Replace("fabric:/", "")}/" +
-                         $"{this.configSettings.RoomManagerName}/api/RoomStore/";
+            this.startingColors = new[]
+            {
+                "ADD8E6",
+                "99FFCC",
+                "CCCC99",
+                "CCCCCC",
+                "CCCCFF",
+                "CCFF99",
+                "CCFFCC",
+                "CCFFFF",
+                "FFCC99",
+                "FFCCCC",
+                "FFCCFF",
+                "FFFF99",
+                "FFFFCC"
+            };
         }
 
         /// <summary>
@@ -89,8 +88,6 @@ namespace PlayerManager.Controllers
                 if (!PlayerManager.IsActive)
                     return new ContentResult {StatusCode = 500, Content = "Service is still starting up. Please retry."};
 
-                this.RenewProxy();
-
                 IReliableDictionary<string, PlayerPackage> playdict =
                     await this.stateManager.GetOrAddAsync<IReliableDictionary<string, PlayerPackage>>(PlayersDictionaryName);
 
@@ -107,27 +104,20 @@ namespace PlayerManager.Controllers
                     if (!playerOption.HasValue)
                     {
                         //State: Player does not exist / Cannot be in a game
-                        Random rand = new Random();
+                        Random rand = new Random(DateTime.Now.Millisecond);
                         //Generate a new player with a random position
-                        Player newPlayer = new Player(rand.Next() % 100 - 6, rand.Next() % 96 - 6, this.startingColors[rand.Next() % this.startingColors.Length]);
+                        Player newPlayer = new Player(
+                            rand.Next() % 100 - 6,
+                            rand.Next() % 96 - 6,
+                            this.startingColors[rand.Next() % this.startingColors.Length]);
 
                         //Package the new player with its baseline statistics
                         PlayerPackage newPlayerPackage = new PlayerPackage(newPlayer, LogState.LoggedIn, 1, DateTime.UtcNow, roomid);
                         await playdict.AddAsync(tx, playerid, newPlayerPackage);
                         await tx.CommitAsync();
 
-                        //Player now exists and is logged in, but room does not have data
-                        int key = Partitioners.GetRoomPartition(roomid);
-                        string url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}" +
-                                     $"&playerdata={JsonConvert.SerializeObject(newPlayer)}" +
-                                     $"&roomtype={roomtype}" +
-                                     $"&PartitionKind=Int64Range&PartitionKey={key}";
-                        HttpResponseMessage response = await this.httpClient.GetAsync(url);
 
-                        string responseMessage = await response.Content.ReadAsStringAsync();
-                        return (int) response.StatusCode == 200
-                            ? new ContentResult {StatusCode = 200, Content = roomtype} //Player is logged in and room has data
-                            : new ContentResult {StatusCode = 500, Content = responseMessage}; //Player is logged in but room does not have data
+                        return await this.NewGameRequestHelper(roomid, playerid, roomtype, newPlayer);
                     }
 
                     //////////////////////////////////////////////////////
@@ -157,25 +147,14 @@ namespace PlayerManager.Controllers
                         await tx.CommitAsync();
 
                         // Request a newgame in the room we want to join
-                        int key = Partitioners.GetRoomPartition(roomid);
-                        string url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}" +
-                                     $"&playerdata={JsonConvert.SerializeObject(playerOption.Value.Player)}" +
-                                     $"&roomtype={roomtype}" +
-                                     $"&PartitionKind=Int64Range&PartitionKey={key}";
-                        HttpResponseMessage response = await this.httpClient.GetAsync(url);
-
-                        // If this was successful we are now in agreement state, otherwise we may be in a failure state, handled below
-                        string responseMessage = await response.Content.ReadAsStringAsync();
-                        return (int) response.StatusCode == 200
-                            ? new ContentResult {StatusCode = 200, Content = roomtype}
-                            : new ContentResult {StatusCode = 500, Content = responseMessage};
+                        return await this.NewGameRequestHelper(roomid, playerid, roomtype, playerOption.Value.Player);
                     }
 
 
                     /////////////////////////////////////////////////////
                     // SCENARIO 3: PLAYER HAS ACCOUNT AND IS LOGGED IN //
                     /////////////////////////////////////////////////////
-                 
+
                     await tx.CommitAsync();
                     playerPackage = playerOption.Value;
                 } // end of tx
@@ -189,75 +168,69 @@ namespace PlayerManager.Controllers
                         * verify that this is not the state we are in.
                         */
 
-                    //finish our transaction
-                    int key = Partitioners.GetRoomPartition(roomid);
+                    int key = Partitioners.GetRoomPartition(playerPackage.RoomId);
 
                     // We first ask if the room has the data to determine which of the above states we are in.
-                    string url = this.proxy + $"Exists/?playerid={playerid}&roomid={roomid}&PartitionKind=Int64Range&PartitionKey={key}";
+                    string url = this.proxy + $"Exists/?playerid={playerid}&roomid={playerPackage.RoomId}&PartitionKind=Int64Range&PartitionKey={key}";
                     HttpResponseMessage response = await this.httpClient.GetAsync(url);
+
+                    if ((int) response.StatusCode == 404)
+                    {
+                        this.RenewProxy();
+
+                        url = this.proxy + $"Exists/?playerid={playerid}&roomid={playerPackage.RoomId}&PartitionKind=Int64Range&PartitionKey={key}";
+                        response = await this.httpClient.GetAsync(url);
+                    }
+
                     string responseMessage = await response.Content.ReadAsStringAsync();
-                    if ((int)response.StatusCode == 200)
+                    if ((int) response.StatusCode == 200)
                     {
                         //Player is logged in, so we must deny this request
                         if (responseMessage == "true")
-                            return new ContentResult { StatusCode = 400, Content = "This player is already logged in" };
+                            return new ContentResult {StatusCode = 400, Content = "This player is already logged in"};
 
                         //Player is not logged in, so we can log into whichever room we want
                         if (responseMessage == "false")
+                        {
                             using (ITransaction tx1 = this.stateManager.CreateTransaction())
                             {
                                 playerPackage.RoomId = roomid;
                                 playerPackage.NumLogins++;
                                 await playdict.SetAsync(tx1, playerid, playerPackage);
-                                await tx1.CommitAsync();
 
-                                key = Partitioners.GetRoomPartition(roomid);
-                                url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}" +
-                                        $"&playerdata={JsonConvert.SerializeObject(playerPackage.Player)}" +
-                                        $"&roomtype={roomtype}" +
-                                        $"&PartitionKind=Int64Range&PartitionKey={key}";
-                                response = await this.httpClient.GetAsync(url);
-                                responseMessage = await response.Content.ReadAsStringAsync();
-                                return (int)response.StatusCode == 200
-                                    ? new ContentResult { StatusCode = 200, Content = roomtype }
-                                    : new ContentResult { StatusCode = 500, Content = responseMessage };
+                                await tx1.CommitAsync();
                             }
+
+                            return await this.NewGameRequestHelper(roomid, playerid, roomtype, playerPackage.Player);
+                        }
 
                         Environment.FailFast("If returning a success code, the message must be either true or false.");
                     }
                     else
                     {
-                        return new ContentResult { StatusCode = 500, Content = "Something went wrong, please retry" };
+                        return new ContentResult {StatusCode = 500, Content = "Something went wrong, please retry"};
                     }
                 }
 
                 Environment.FailFast("Players must exist with a valid state attached to them");
-                return new ContentResult { StatusCode = 500 };
+                return new ContentResult {StatusCode = 500};
             }
             catch (FabricException e)
             {
                 if (e is FabricObjectClosedException || e is FabricNotPrimaryException)
-                {
-                    return new ContentResult { StatusCode = 503, Content = e.Message };
-                }
-                else if (e is FabricTransientException)
-                {
-                    //TODO: retry the transaction
-                    return new ContentResult { StatusCode = 503, Content = e.Message };
-                }
-                else
-                {
-                    return new ContentResult { StatusCode = 500, Content = e.Message };
-                }
+                    return new ContentResult {StatusCode = 503, Content = e.Message};
+                if (e is FabricTransientException)
+                    return new ContentResult {StatusCode = 503, Content = e.Message};
+                return new ContentResult {StatusCode = 500, Content = e.Message};
             }
             catch (TimeoutException e)
             {
                 //TODO: retry the transaction
-                return new ContentResult { StatusCode = 503, Content = e.Message };
+                return new ContentResult {StatusCode = 503, Content = e.Message};
             }
             catch (Exception e)
             {
-                return new ContentResult { StatusCode = 500, Content = e.GetBaseException().Message };
+                return new ContentResult {StatusCode = 500, Content = e.GetBaseException().Message};
             }
         }
 
@@ -275,7 +248,7 @@ namespace PlayerManager.Controllers
             try
             {
                 if (!PlayerManager.IsActive)
-                    return new ContentResult { StatusCode = 500, Content = "Service is still starting up. Please retry." };
+                    return new ContentResult {StatusCode = 500, Content = "Service is still starting up. Please retry."};
 
                 // Get newer game data from the active room
                 Player player = JsonConvert.DeserializeObject<Player>(playerdata);
@@ -291,7 +264,7 @@ namespace PlayerManager.Controllers
                     {
                         // Tried to end game for a player that isn't here. This is a fail state.
                         await tx.CommitAsync();
-                        return new ContentResult {StatusCode = 500, Content = "Cannot log out a player not in this system. Check partition." };
+                        return new ContentResult {StatusCode = 500, Content = "Cannot log out a player not in this system. Check partition."};
                     }
 
                     // Player says already logged out, this means the last log in attempt was successful, but the return message never got back to
@@ -316,34 +289,25 @@ namespace PlayerManager.Controllers
 
                     await tx.CommitAsync();
                     Environment.FailFast("Player must have one of the above states: doesn't exist, loggedin, or loggedout.");
-                    return new ContentResult { StatusCode = 500 };
+                    return new ContentResult {StatusCode = 500};
                 }
-
             }
             catch (FabricException e)
             {
                 if (e is FabricObjectClosedException || e is FabricNotPrimaryException)
-                {
-                    return new ContentResult { StatusCode = 503, Content = e.Message };
-                }
-                else if (e is FabricTransientException)
-                {
-                    //TODO: retry the transaction
-                    return new ContentResult { StatusCode = 503, Content = e.Message };
-                }
-                else
-                {
-                    return new ContentResult { StatusCode = 500, Content = e.Message };
-                }
+                    return new ContentResult {StatusCode = 503, Content = e.Message};
+                if (e is FabricTransientException)
+                    return new ContentResult {StatusCode = 503, Content = e.Message};
+                return new ContentResult {StatusCode = 500, Content = e.Message};
             }
             catch (TimeoutException e)
             {
                 //TODO: retry the transaction
-                return new ContentResult { StatusCode = 503, Content = e.Message };
+                return new ContentResult {StatusCode = 503, Content = e.Message};
             }
             catch (Exception e)
             {
-                return new ContentResult { StatusCode = 500, Content = e.GetBaseException().Message };
+                return new ContentResult {StatusCode = 500, Content = e.GetBaseException().Message};
             }
         }
 
@@ -359,7 +323,7 @@ namespace PlayerManager.Controllers
             try
             {
                 if (!PlayerManager.IsActive)
-                    return new ContentResult { StatusCode = 500, Content = "Service is still starting up. Please retry." };
+                    return new ContentResult {StatusCode = 500, Content = "Service is still starting up. Please retry."};
 
                 IReliableDictionary<string, PlayerPackage> playdict =
                     await this.stateManager.GetOrAddAsync<IReliableDictionary<string, PlayerPackage>>(PlayersDictionaryName);
@@ -385,35 +349,65 @@ namespace PlayerManager.Controllers
                                                stats.NumAccounts;
                     }
                     await tx.CommitAsync();
-
-                    return this.Json(stats);
                 }
+
+                return this.Json(stats);
             }
             catch (FabricException e)
             {
                 if (e is FabricObjectClosedException || e is FabricNotPrimaryException)
-                {
-                    return new ContentResult { StatusCode = 503, Content = e.Message };
-                }
-                else if (e is FabricTransientException)
-                {
-                    //TODO: retry the transaction
-                    return new ContentResult { StatusCode = 503, Content = e.Message };
-                }
-                else
-                {
-                    return new ContentResult { StatusCode = 500, Content = e.Message };
-                }
+                    return new ContentResult {StatusCode = 503, Content = e.Message};
+                if (e is FabricTransientException)
+                    return new ContentResult {StatusCode = 503, Content = e.Message};
+                return new ContentResult {StatusCode = 500, Content = e.Message};
             }
             catch (TimeoutException e)
             {
                 //TODO: retry the transaction
-                return new ContentResult { StatusCode = 503, Content = e.Message };
+                return new ContentResult {StatusCode = 503, Content = e.Message};
             }
             catch (Exception e)
             {
-                return new ContentResult { StatusCode = 500, Content = e.GetBaseException().Message };
+                return new ContentResult {StatusCode = 500, Content = e.GetBaseException().Message};
             }
+        }
+
+
+        private void RenewProxy()
+        {
+            // Proxy to coordinate with RoomManager
+            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:" +
+                         $"{this.configSettings.ReverseProxyPort}/" +
+                         $"{this.serviceContext.CodePackageActivationContext.ApplicationName.Replace("fabric:/", "")}/" +
+                         $"{this.configSettings.RoomManagerName}/api/RoomStore/";
+        }
+
+        private async Task<ContentResult> NewGameRequestHelper(string roomid, string playerid, string roomtype, Player player)
+        {
+            // Request a newgame in the room we want to join
+            int key = Partitioners.GetRoomPartition(roomid);
+            string url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}" +
+                         $"&playerdata={JsonConvert.SerializeObject(player)}" +
+                         $"&roomtype={roomtype}" +
+                         $"&PartitionKind=Int64Range&PartitionKey={key}";
+            HttpResponseMessage response = await this.httpClient.GetAsync(url);
+
+            if ((int) response.StatusCode == 404)
+            {
+                this.RenewProxy();
+
+                url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}" +
+                      $"&playerdata={JsonConvert.SerializeObject(player)}" +
+                      $"&roomtype={roomtype}" +
+                      $"&PartitionKind=Int64Range&PartitionKey={key}";
+                response = await this.httpClient.GetAsync(url);
+            }
+
+            // If this was successful we are now in agreement state, otherwise we may be in a failure state, handled below
+            string responseMessage = await response.Content.ReadAsStringAsync();
+            return (int) response.StatusCode == 200
+                ? new ContentResult {StatusCode = 200, Content = roomtype}
+                : new ContentResult {StatusCode = 500, Content = responseMessage};
         }
     }
 }

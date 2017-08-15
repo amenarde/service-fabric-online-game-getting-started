@@ -44,16 +44,6 @@ namespace WebService.Controllers
             this.RenewProxy();
         }
 
-        // Should be run to update the address to the stateful service, which may change when the service moves to a different node
-        // during failover or regular load balancing.
-        private void RenewProxy()
-        {
-            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:" +
-                         $"{this.configSettings.ReverseProxyPort}/" +
-                         $"{this.serviceContext.CodePackageActivationContext.ApplicationName.Replace("fabric:/", "")}/" +
-                         $"{this.configSettings.RoomManagerName}/api/RoomStore/";
-        }
-
         /// <summary>
         /// Called once a second by clients that are not currently logged in
         /// </summary>
@@ -79,7 +69,9 @@ namespace WebService.Controllers
                     if ((int) response.StatusCode == 404)
                     {
                         this.RenewProxy();
-                        return await this.GetRoomsAsync();
+
+                        url = this.proxy + $"GetRooms/?PartitionKind={partition.PartitionInformation.Kind}&PartitionKey={key}";
+                        response = await this.httpClient.GetAsync(url);
                     }
 
                     // If one partition fails, fail the whole request. Can also choose to just retry that parititon or retry the whole
@@ -119,11 +111,15 @@ namespace WebService.Controllers
             HttpResponseMessage response = await this.httpClient.GetAsync(url);
 
             //Renew the proxy if the stateful service has moved
-            if ((int) response.StatusCode != 404)
-                return this.StatusCode((int) response.StatusCode, await response.Content.ReadAsStringAsync());
+            if ((int) response.StatusCode == 404)
+            {
+                this.RenewProxy();
 
-            this.RenewProxy();
-            return await this.GetGameAsync(roomid);
+                url = this.proxy + $"GetGame/?roomid={roomid}&PartitionKind=Int64Range&PartitionKey={key}";
+                response = await this.httpClient.GetAsync(url);
+            }
+
+            return this.StatusCode((int) response.StatusCode, await response.Content.ReadAsStringAsync());
         }
 
         /// <summary>
@@ -147,6 +143,18 @@ namespace WebService.Controllers
                          $"&playerdata={JsonConvert.SerializeObject(p)}&PartitionKind=Int64Range&PartitionKey={key}";
 
             HttpResponseMessage response = await this.httpClient.GetAsync(url);
+
+            if ((int) response.StatusCode == 404)
+            {
+                this.RenewProxy();
+
+                url = this.proxy +
+                      $"UpdateGame/?roomid={roomid}&playerid={playerid}" +
+                      $"&playerdata={JsonConvert.SerializeObject(p)}&PartitionKind=Int64Range&PartitionKey={key}";
+
+                response = await this.httpClient.GetAsync(url);
+            }
+
             return this.StatusCode((int) response.StatusCode, await response.Content.ReadAsStringAsync());
         }
 
@@ -163,9 +171,27 @@ namespace WebService.Controllers
         {
             int key = Partitioners.GetRoomPartition(roomid);
             string url = this.proxy + $"EndGame/?roomid={roomid}&playerid={playerid}&PartitionKind=Int64Range&PartitionKey={key}";
-
             HttpResponseMessage response = await this.httpClient.GetAsync(url);
+
+            if ((int) response.StatusCode == 404)
+            {
+                this.RenewProxy();
+
+                url = this.proxy + $"EndGame/?roomid={roomid}&playerid={playerid}&PartitionKind=Int64Range&PartitionKey={key}";
+                response = await this.httpClient.GetAsync(url);
+            }
+
             return this.StatusCode((int) response.StatusCode, await response.Content.ReadAsStringAsync());
+        }
+
+        // Should be run to update the address to the stateful service, which may change when the service moves to a different node
+        // during failover or regular load balancing.
+        private void RenewProxy()
+        {
+            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:" +
+                         $"{this.configSettings.ReverseProxyPort}/" +
+                         $"{this.serviceContext.CodePackageActivationContext.ApplicationName.Replace("fabric:/", "")}/" +
+                         $"{this.configSettings.RoomManagerName}/api/RoomStore/";
         }
     }
 }

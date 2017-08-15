@@ -1,25 +1,27 @@
-﻿using System.Collections.Generic;
-using System.Fabric;
-using System.IO;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.ServiceFabric.Services.Communication.AspNetCore;
-using Microsoft.ServiceFabric.Services.Communication.Runtime;
-using Microsoft.ServiceFabric.Services.Runtime;
-using System.Net.Http;
-using System.Threading;
+﻿// ------------------------------------------------------------
+//  Copyright (c) Microsoft Corporation.  All rights reserved.
+//  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
+// ------------------------------------------------------------
 
 namespace PlayerManager
 {
-    using System.Runtime.Remoting.Messaging;
+    using System.Collections.Generic;
+    using System.Fabric;
+    using System.IO;
+    using System.Net.Http;
+    using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.AspNetCore.Hosting;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.ServiceFabric.Services.Communication.AspNetCore;
+    using Microsoft.ServiceFabric.Services.Communication.Runtime;
+    using Microsoft.ServiceFabric.Services.Runtime;
 
     /// <summary>
     /// The FabricRuntime creates an instance of this class for each service type instance. 
     /// </summary>
     public sealed class PlayerManager : StatefulService
     {
-
         /// <summary>
         /// The IsActive token is used to ensure our controllers do not serve requests until the application is initialized. Controller
         /// functions check this token before they serve requests. When RunAsync is called on the Service is when it is ready to
@@ -35,7 +37,6 @@ namespace PlayerManager
         public PlayerManager(StatefulServiceContext context)
             : base(context)
         {
-            
         }
 
         /// <summary>
@@ -44,7 +45,6 @@ namespace PlayerManager
         /// <param name="cancellationToken"></param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            
             IsActive = true;
         }
 
@@ -55,21 +55,22 @@ namespace PlayerManager
         /// <returns>The collection of listeners.</returns>
         protected override IEnumerable<ServiceReplicaListener> CreateServiceReplicaListeners()
         {
-            return new ServiceReplicaListener[]
+            return new[]
             {
-                new ServiceReplicaListener(serviceContext =>
-                    new KestrelCommunicationListener(serviceContext, (url, listener) =>
-                    {
-                        ServiceEventSource.Current.ServiceMessage(serviceContext, $"Starting Kestrel on {url}");
+                new ServiceReplicaListener(
+                    serviceContext =>
+                        new KestrelCommunicationListener(
+                            serviceContext,
+                            (url, listener) =>
+                            {
+                                ServiceEventSource.Current.ServiceMessage(serviceContext, $"Starting Kestrel on {url}");
 
-                        return new WebHostBuilder()
+                                return new WebHostBuilder()
                                     .UseKestrel()
                                     .ConfigureServices(
                                         services => services
                                             .AddSingleton(new ConfigSettings(serviceContext))
                                             .AddSingleton(new HttpClient())
-                                            .AddSingleton(serviceContext)
-                                            .AddSingleton(this.StateManager)
                                             .AddSingleton(this))
                                     .UseContentRoot(Directory.GetCurrentDirectory())
                                     .UseStartup<Startup>()
@@ -77,7 +78,7 @@ namespace PlayerManager
                                     .UseServiceFabricIntegration(listener, ServiceFabricIntegrationOptions.UseUniqueServiceUrl)
                                     .UseUrls(url)
                                     .Build();
-                    }))
+                            }))
             };
         }
     }

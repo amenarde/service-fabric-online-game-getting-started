@@ -60,15 +60,14 @@ window.onload = function() {
 
 
 //To help prevent missing a keyup, causing the player to continuously move
-window.onblur = function () {
-    if (gameArea) {
+window.onblur = function() {
+    if (gameArea.keys) {
         gameArea.keys[37] = false;
         gameArea.keys[38] = false;
         gameArea.keys[39] = false;
-        gameArea.keys[40] = false;   
+        gameArea.keys[40] = false;
     }
 };
-
 
 
 // On window close make an attempt to end the game.
@@ -126,8 +125,7 @@ function newgame(bool, context) {
 
 
     //Only accept nonempty alphanumeric usernames under 20 characters long
-    if (!/^(?=.{0,20}$)[a-z0-9]+$/i.exec(roomid))
-    {
+    if (!/^(?=.{0,20}$)[a-z0-9]+$/i.exec(roomid)) {
         updateStatus("Please enter an alphanumeric room name under 20 characters long");
         return;
     }
@@ -162,7 +160,8 @@ function newgame(bool, context) {
                     gameArea.start();
 
                     //run getgame in the "new game" setting
-                    getgame(true, true);
+                    setTimeout(function() { getgame(true, true); }, 100);
+                    
 
                     //hide login-related html
                     document.getElementsByClassName("gameDiv")[0].style.display = "";
@@ -550,11 +549,14 @@ function getPlayerStats() {
                 if (returnData) {
                     document.getElementById("status").innerHTML =
                         "Num. Accounts: " +
-                        returnData.NumAccounts + " | " +
+                        returnData.NumAccounts +
+                        " | " +
                         "Num. Logged in: " +
-                        returnData.NumLoggedIn + " | " +
+                        returnData.NumLoggedIn +
+                        " | " +
                         "Avg. Logins / Account: " +
-                        returnData.AvgNumLogins.toFixed(3) + " | " +
+                        returnData.AvgNumLogins.toFixed(3) +
+                        " | " +
                         "Average Account Age (hours): " +
                         (returnData.AvgAccountAge / 3600.0).toFixed(3);
                 } else {

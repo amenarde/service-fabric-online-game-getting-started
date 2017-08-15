@@ -31,9 +31,9 @@
             and coordinates requests to get the entire room state or to update state to those rooms. This
             </summary>
         </member>
-        <member name="M:RoomManager.Controllers.RoomStoreController.#ctor(System.Fabric.StatefulServiceContext,System.Net.Http.HttpClient,RoomManager.ConfigSettings,Microsoft.ServiceFabric.Data.IReliableStateManager,RoomManager.RoomManager)">
+        <member name="M:RoomManager.Controllers.RoomStoreController.#ctor(System.Net.Http.HttpClient,RoomManager.ConfigSettings,RoomManager.RoomManager)">
             <summary>
-                This constructor will execute the first time a function in the controller is called.
+            This constructor will execute the first time a function in the controller is called.
             </summary>
         </member>
         <member name="M:RoomManager.Controllers.RoomStoreController.NewGame(System.String,System.String,System.String,System.String)">

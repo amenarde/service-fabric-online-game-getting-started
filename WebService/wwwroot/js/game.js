@@ -15,6 +15,8 @@ var gameArea = {
         this.canvas.width = side;
         this.canvas.height = side;
         this.canvas.position = "absolute";
+
+        //try to position canvas in center of screen
         if (w > h) {
             this.canvas.style.left = (w - side) / 2;
             this.canvas.style.top = 0;
@@ -25,7 +27,10 @@ var gameArea = {
 
         this.context = this.canvas.getContext("2d");
 
-        document.body.insertBefore(this.canvas, document.getElementsByClassName("status_bar")[0]);
+        //insert the canvas before the status bar
+        document.body.insertBefore(this.canvas, document.getElementElementById("status_bar"));
+
+        //add in the keylisteners used for moving around the game
         window.addEventListener("keydown",
             function(e) {
                 gameArea.keys = (gameArea.keys || []);
@@ -37,9 +42,13 @@ var gameArea = {
                 gameArea.keys[e.keyCode] = false;
             });
     },
+
+    //clears the game canvas during redraw
     clear: function() {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     },
+
+    //the primary draw game loop
     drawGame: function(returnData, overrideClientState) {
         gameArea.clear();
 
@@ -54,6 +63,7 @@ var gameArea = {
             roomDraw(this.context, Math.min(this.canvas.width, this.canvas.height), "img/room.png");
         }
 
+        //We check for an inactivity logout by making sure that the getgame has our data, if it doesn't, we were logged out
         var foundMyself = false;
 
         clientgamestate.RoomData = returnData;
@@ -81,6 +91,9 @@ var gameArea = {
                 );
             } else {
                 playerDraw(
+
+                    //draw the player, for each player
+
                     this.context,
                     parseInt(Math.min(this.canvas.width, this.canvas.height) * 0.1),
                     parseInt(this.canvas.width * (returnData[i].Value.XPos / 100)),
@@ -88,10 +101,10 @@ var gameArea = {
                     returnData[i].Key,
                     returnData[i].Value.Color);
             }
+        }
 
-            if (!foundMyself) {
-                location.reload();
-            }
+        if (!foundMyself) {
+            location.reload();
         }
     }
 };
@@ -106,8 +119,9 @@ function roomDraw(ctx, side, src) {
     ctx.drawImage(this.image, 0, 0, this.side, this.side);
 }
 
-function playerDraw(ctx, side, x, y, name, Color) {
+function playerDraw(ctx, side, x, y, name, color) {
 
+    //this draws the enterior colored part of the character
     ctx.beginPath();
     ctx.moveTo(x, y + side);
     ctx.quadraticCurveTo(parseInt(x + side / 2.0), y, x + side, y + side);
@@ -116,9 +130,10 @@ function playerDraw(ctx, side, x, y, name, Color) {
     ctx.closePath();
     ctx.lineWidth = 4;
     ctx.stroke();
-    ctx.fillStyle = "#".concat(Color);
+    ctx.fillStyle = "#".concat(color);
     ctx.fill();
 
+    //this draws the outline and eyes of the player
     ctx.beginPath();
     ctx.arc(parseInt(x + side / 3.0), parseInt(y + side / 1.2), 4, 0, 2 * Math.PI, false);
     ctx.arc(parseInt(x + 2 * side / 3.0), parseInt(y + side / 1.2), 4, 0, 2 * Math.PI, false);
@@ -127,10 +142,9 @@ function playerDraw(ctx, side, x, y, name, Color) {
     ctx.closePath();
 
 
-    //ctx.drawImage(image, x, y + 50, side, parseInt(side * 0.75));
-
+    //this draws the name of the player under the player
     ctx.font = "16px Arial";
-    ctx.fillStyle = "white";
+    ctx.fillStyle = color;
     var startx = Math.max(0, parseInt(x + (side - ctx.measureText(name).width) / 2.0));
-    ctx.fillText(name, startx, y + side + 35);
+    ctx.fillText(name, startx, y + side + 28);
 }

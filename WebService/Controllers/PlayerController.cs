@@ -44,17 +44,6 @@ namespace WebService.Controllers
             this.RenewProxy();
         }
 
-        // Should be run to update the address to the stateful service, which may change when the service moves to a different node
-        // during failover or regular load balancing.
-        private void RenewProxy()
-        {
-            // gets the IP address of the application, and the port of the proxy, adds fabric to it, and address to controller
-            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:" +
-                         $"{this.configSettings.ReverseProxyPort}/" +
-                         $"{this.serviceContext.CodePackageActivationContext.ApplicationName.Replace("fabric:/", "")}/" +
-                         $"{this.configSettings.PlayerManagerName}/api/PlayerStore/";
-        }
-
         /// <summary>
         /// Handles the login process by verifying arguments.
         /// </summary>
@@ -71,13 +60,9 @@ namespace WebService.Controllers
             // also verify no one tries to make a room other than those provided
             Regex names = new Regex(@"(?i)([a-z?0-9?\-?]\s?){0,10}");
             if (!names.IsMatch(playerid))
-            {
                 return this.StatusCode(400, this.Json("Invalid username."));
-            }
             if (!names.IsMatch(roomid))
-            {
                 return this.StatusCode(400, this.Json("Invalid room name."));
-            }
             try
             {
                 Enum.Parse(typeof(RoomTypes), roomtype);
@@ -95,7 +80,9 @@ namespace WebService.Controllers
             if ((int) response.StatusCode == 404)
             {
                 this.RenewProxy();
-                return await this.NewGameAsync(playerid, roomid, roomtype);
+
+                url = this.proxy + $"NewGame/?playerid={playerid}&roomid={roomid}&roomtype={roomtype}&PartitionKind=Int64Range&PartitionKey={key}";
+                response = await this.httpClient.GetAsync(url); //Send the request and wait for the response
             }
 
             // Forward the response we get to the client
@@ -158,10 +145,18 @@ namespace WebService.Controllers
                 Startup.PlayerStatsLastUpdated = DateTime.UtcNow;
                 return this.StatusCode(200, JsonConvert.SerializeObject(result));
             }
-            else
-            {
-                return this.StatusCode(200, JsonConvert.SerializeObject(Startup.PlayerStats));
-            }
+            return this.StatusCode(200, JsonConvert.SerializeObject(Startup.PlayerStats));
+        }
+
+        // Should be run to update the address to the stateful service, which may change when the service moves to a different node
+        // during failover or regular load balancing.
+        private void RenewProxy()
+        {
+            // gets the IP address of the application, and the port of the proxy, adds fabric to it, and address to controller
+            this.proxy = $"http://{FabricRuntime.GetNodeContext().IPAddressOrFQDN}:" +
+                         $"{this.configSettings.ReverseProxyPort}/" +
+                         $"{this.serviceContext.CodePackageActivationContext.ApplicationName.Replace("fabric:/", "")}/" +
+                         $"{this.configSettings.PlayerManagerName}/api/PlayerStore/";
         }
     }
 }

@@ -8,12 +8,12 @@ namespace RoomManager
     using System;
     using System.Collections.Generic;
     using System.Fabric;
-    using System.Fabric.Management.ServiceModel;
     using System.IO;
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
     using Common;
+    using global::RoomManager.Controllers;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.ServiceFabric.Data;
@@ -21,7 +21,6 @@ namespace RoomManager
     using Microsoft.ServiceFabric.Services.Communication.AspNetCore;
     using Microsoft.ServiceFabric.Services.Communication.Runtime;
     using Microsoft.ServiceFabric.Services.Runtime;
-    using global::RoomManager.Controllers;
 
     /// <summary>
     /// The FabricRuntime creates an instance of this class for each service type instance. 
@@ -35,8 +34,7 @@ namespace RoomManager
         /// </summary>
         public static bool IsActive;
 
-        private string selfProxy; // Should point to self
-        private static readonly TimeSpan InactivityLogoutSeconds = new TimeSpan(0,0,300);
+        private static readonly TimeSpan InactivityLogoutSeconds = new TimeSpan(0, 0, 300);
         private static readonly Uri RoomDictionaryName = new Uri("store:/rooms");
 
         /// <summary>
@@ -62,7 +60,10 @@ namespace RoomManager
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                RoomStoreController roomController = new RoomStoreController(this.Context, new HttpClient(), new ConfigSettings(this.Context), this.StateManager, this);
+                RoomStoreController roomController = new RoomStoreController(
+                    new HttpClient(),
+                    new ConfigSettings(this.Context),
+                    this);
 
                 //Here is the autologoff protocol, used for logging out inactive players.
                 IReliableDictionary<string, Room> roomdict =
@@ -82,7 +83,6 @@ namespace RoomManager
 
                 // For each room, get an enumerator, find players that are inactive, and ask for them to be logged off.
                 foreach (string roomName in roomList)
-                {
                     using (ITransaction tx = this.StateManager.CreateTransaction())
                     {
                         IReliableDictionary<string, ActivePlayer> activeroom =
@@ -93,24 +93,18 @@ namespace RoomManager
                         IAsyncEnumerator<KeyValuePair<string, ActivePlayer>> activeRoomEnumerator = enumerable.GetAsyncEnumerator();
                         List<KeyValuePair<string, ActivePlayer>> activePlayerList = new List<KeyValuePair<string, ActivePlayer>>();
 
-                        while(await activeRoomEnumerator.MoveNextAsync(CancellationToken.None))
+                        while (await activeRoomEnumerator.MoveNextAsync(CancellationToken.None))
                             activePlayerList.Add(activeRoomEnumerator.Current);
 
                         await tx.CommitAsync();
 
                         foreach (KeyValuePair<string, ActivePlayer> player in activePlayerList)
-                        {
                             // For each player, check if the time since they were last updated is greater than the inactivity timeout
                             if (DateTime.UtcNow.Subtract(player.Value.LastUpdated) > InactivityLogoutSeconds)
-                            {
                                 await roomController.EndGame(roomName, player.Key);
-                            }
-                        }
                     }
-                }
 
                 await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
-
             }
         }
 
@@ -120,7 +114,7 @@ namespace RoomManager
         /// <returns>The collection of listeners.</returns>
         protected override IEnumerable<ServiceReplicaListener> CreateServiceReplicaListeners()
         {
-            return new ServiceReplicaListener[]
+            return new[]
             {
                 new ServiceReplicaListener(
                     serviceContext =>
@@ -136,8 +130,6 @@ namespace RoomManager
                                         services => services
                                             .AddSingleton(new ConfigSettings(serviceContext))
                                             .AddSingleton(new HttpClient())
-                                            .AddSingleton(serviceContext)
-                                            .AddSingleton(this.StateManager)
                                             .AddSingleton(this))
                                     .UseContentRoot(Directory.GetCurrentDirectory())
                                     .UseStartup<Startup>()
