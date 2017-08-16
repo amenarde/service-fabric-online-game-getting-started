@@ -25,7 +25,7 @@ For these reasons, we will proceed with option *3*. Next we consider the process
 
 This is more straightforward. We would like to display a text box with recent chat data, and have an entry form to take in chat data. On implementation we will consider how color is updated as a model for how to implement this.
 
-### Scope
+## Scope
 
 There are some reasonable limitations to this feature that come to mind, and the exact limitations will depend a lot on considerations such as:
 - What will this chat be used for?
@@ -38,4 +38,104 @@ These are all questions that would change nuances of the implementation. For our
 
 If multiple developers are working on this feature, the first step would be to set the API so that the front-end and backend developers can build to a contract. If built by a single developer, it is entirely up to the developer whether to implement front -> back or back -> front. In this example we are going to work back -> front.
 
-`RoomStoreController`
+`Common/DataStructs`
+The first thing we have to do is extend our data package to include a chat. Since we should not nestle an object inside a struct, we make our room an object:
+
+```c#
+public class Room
+{
+    public int NumPlayers { get; set; }
+    public string RoomType { get; set; }
+    public List<string> RoomChat { get; set; }
+
+    public Room(int numPlayers, string roomType, List<string> roomChat)
+    {
+        this.NumPlayers = numPlayers;
+        this.RoomType = roomType;
+        this.RoomChat = roomChat;
+    }
+}
+```
+
+However, we are not off the hook. The reasoning for originally using structs was because, as value types, they did not have to be deep copied when updating them. When ReliableCollection return objects they do have to be deep copied, so we have to revisit all the locations that deal with changing room values and update them. Luckily the only location is
+`RoomManager/Controllers/RoomStoreController.cs/NewGame()`
+
+```c#
+if (!roomOption.HasValue)
+{
+    //Scenario: Room does not exist yet
+    await roomdict.AddAsync(tx, roomid, new Room(1, roomtype, new List<string>()));
+}
+else
+{
+    //Scenario: Room does exist
+    Room newRoom = new Room(roomOption.Value.NumPlayers, roomOption.Value.RoomType, new List<string>(roomOption.Value.RoomChat));
+    newRoom.NumPlayers++;
+    await roomdict.SetAsync(tx, roomid, newRoom);
+}
+```
+
+We note that we may later also have to make sure the javascript agrees with this new data structure when the objects get passed back from `GetRooms`.
+
+Next we write our update chat function. This requires verifying if the room exists, perhaps verifying if the player exists, and then managing the chat list.
+
+```c#
+[Route("api/[controller]/UpdateChat")]
+[HttpGet]
+public async Task<IActionResult> UpdateChat(string playerid, DateTime timeStamp, string message, string roomid)
+{
+    try
+    {
+        if (!RoomManager.IsActive)
+            return new ContentResult { StatusCode = 500, Content = "Service is still starting up. Please retry." };
+
+        IReliableDictionary<string, Room> roomdict =
+            await this.stateManager.GetOrAddAsync<IReliableDictionary<string, Room>>(RoomDictionaryName);
+
+        using (ITransaction tx = this.stateManager.CreateTransaction())
+        {
+            ConditionalValue<Room> roomOption = await roomdict.TryGetValueAsync(tx, roomid, LockMode.Update);
+
+            //Check that the room exists
+            if (!roomOption.HasValue) //update lock because planning to write
+            {
+                await tx.CommitAsync();
+                return new ContentResult { StatusCode = 400, Content = "Cannot write to chat. this room does not exist." };
+            }
+
+            //Check that the player exists
+            IReliableDictionary<string, ActivePlayer> activeroom =
+                await this.stateManager.GetOrAddAsync<IReliableDictionary<string, ActivePlayer>>(roomid);
+
+            if (!await activeroom.ContainsKeyAsync(tx, playerid)) //update lock because planning to write
+            {
+                await tx.CommitAsync();
+                return new ContentResult { StatusCode = 400, Content = "Cannot write to chat. Player is not in this room." };
+            }
+
+            // Deep copy the room over
+            Room newRoom = new Room(roomOption.Value.NumPlayers, roomOption.Value.RoomType, new List<string>(roomOption.Value.RoomChat));
+
+            // Add the message to the chat
+            newRoom.RoomChat.Add($"{playerid} [{timeStamp}]: {message}");
+
+            // Make sure there are only the ten most recent messages in the chat
+            while (newRoom.RoomChat.Count > 10)
+            {
+                newRoom.RoomChat.RemoveAt(0);
+            }
+
+            await roomdict.SetAsync(tx, roomid, newRoom);
+            await tx.CommitAsync();
+        }
+
+        return new ContentResult { StatusCode = 200, Content = "Chat successfully updated." };
+    }
+    catch (Exception e)
+    {
+        return exceptionHandler(e);
+    }
+}
+```
+
+We now have a way to add messages to our list, so we need a way to get them back. We decided we would do this in the GetGame loop. This again means we will have to edit the ;
