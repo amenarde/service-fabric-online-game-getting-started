@@ -138,4 +138,17 @@ public async Task<IActionResult> UpdateChat(string playerid, DateTime timeStamp,
 }
 ```
 
-We now have a way to add messages to our list, so we need a way to get them back. We decided we would do this in the GetGame loop. This again means we will have to edit the ;
+We now have a way to add messages to our list, so we need a way to get them back. We decided we would do this in the GetGame loop.
+
+
+
+**~ remaining walkthrough in progress ~**
+
+## Next Steps
+Check out these other helpful documents:
+
+- [Learn important Service Fabric concepts to support your readthrough of the code][3]
+- [Learn about the application architecture and data flow.][4]
+
+[3]: ../master/docs/concepts.md
+[4]: ../master/docs/architecture.md
