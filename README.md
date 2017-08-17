@@ -25,8 +25,9 @@ This application only depends on Service Fabric, meaning deployment should be a 
 
 1. Download and install the Visual Studio 2017 Service Fabric SDK [here][1].
 2. Open the .sln solution file in Visual Studio 2017.
-3. Press F5 to run.
-4. Open the application from the local web endpoint: `localhost:8081`
+3. Allow it to download any NuGet packages it needs.
+4. Press F5 to run. If there is an error, make sure it is building to `x64` configuration on the top bar.
+5. Open the application from the local web endpoint: `localhost:8081`
 
 ## Deploying to cloud
 Deploying the application to the cloud is almost as easy as deploying it on your local box:
