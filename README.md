@@ -49,6 +49,9 @@ Enter the client endpoint that you just provided to your `Cloud.xml`, if it is n
 4. Connect to the game at your endpoint, at port `8081`.
 5. Look at your Service Fabric Explorer at your endpoint, at port `19080`. Here you can check on the state of your application. You can simulate failover by restarting a node using the small menu next to the node name.
 
+### Run Tests
+To run a number of integration tests that check the basic end-to-end request patterns most commonly seen, go to `localhost:8081/Test.html`, or your own endpoint, and the tests will run automatically.
+
 ## Next Steps
 This application was designed to be readable to someone without prior knowledge of Service Fabric. All important functions are documented XML-style in /docs, and there are also some general documents to support the readings:
 - [Learn important Service Fabric concepts to support your readthrough of the code][3]
