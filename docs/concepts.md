@@ -50,3 +50,12 @@ Service Fabric is capable of a lot more than the paradigms used in this simple s
 - [Reliable Actors](https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-reliable-actors-introduction)
 - [Containers](https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-containers-overview)
 - [Monitoring Applications](https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-diagnostics-overview)
+
+## Next Steps
+Check out these other helpful documents:
+- [Learn about the application architecture and data flow.][4]
+- [Walk through the implementation of a new feature in the game.][5]
+
+[4]: ../master/docs/architecture.md
+[5]: ../master/docs/newfeature.md
+
